@@ -3,9 +3,13 @@ default: all
 all depend ::
 	$(MAKE) -C src $@
 
-debug depend ::
+analyzerd depend ::
 	$(MAKE) -C src -f debug.mk $@
-release depend ::
+analyzer depend ::
+	$(MAKE) -C src -f release.mk $@
+combinerd depend ::
+	$(MAKE) -C src -f debug.mk $@
+combiner depend ::
 	$(MAKE) -C src -f release.mk $@
 
 test::
