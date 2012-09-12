@@ -1,6 +1,6 @@
 CXX = g++
 
-COMPILE_EXE = -g -Wall
+COMPILE_EXE = -g -Wall -DMAX_LOG_LINE=1500000
 
 CFLAGS = $(INCS) $(COMPILE_EXE)
 
@@ -27,4 +27,3 @@ clean:
 
 %.o: %.cpp
 	$(CXX) $(CFLAGS) -c -o $@ $<
-

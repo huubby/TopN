@@ -14,6 +14,7 @@
 #include "memory.h"
 #include "log.h"
 #include "cmdparse.h"
+#include "nat_log_parser.h"
 
 //-------------------- Command Line Arguments ----------------------
 static char *log_file = NULL;
@@ -44,13 +45,6 @@ CommandLineOptions_t options[] = {
 static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
 
 //--------------------- Global Datas -------------------------------
-#pragma pack(4)
-typedef struct {
-    uint32_t count;
-    uint64_t bytes;
-} logrecord_t;
-#pragma pack()
-#define MAX_LOG_LINE 100000
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 static mem_cache_t *key_cache = NULL;
 static mem_cache_t *value_cache = NULL;
@@ -61,13 +55,6 @@ static hash_table_t *tcp80_map = NULL;
 static hash_table_t *tcp443_map = NULL;
 static hash_table_t *tcp8080_map = NULL;
 static hash_table_t *regular_map = NULL;
-
-typedef enum {
-    REGULAR_PORT = 0
-    , TCP_PORT_80
-    , TCP_PORT_443
-    , TCP_PORT_8080
-} port_type_t;
 
 bool build_wb_list(const char *filename);
 bool build_maps_from_c_list(const char *filename, port_type_t type);
@@ -121,6 +108,7 @@ int main(int argc, char*argv[])
         //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
         process_result = process(line, len);
         line_count++;
+        linelen = getline(&line, &len, input_file);
     }
 
     if (line)
@@ -229,14 +217,6 @@ bool build_maps_from_ct_list(const char *file_name, port_type_t type)
 
     fclose(file);
 
-    return true;
-}
-
-bool parse_log(const char *log
-                , uint32_t *addr, logrecord_t *record, port_type_t *type)
-{
-    // TODO parse
-    //
     return true;
 }
 
