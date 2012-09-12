@@ -1,7 +1,6 @@
-#Project: Uba
-CXX = gcc
+CXX = g++
 
-COMPILE_EXE = -g -Wall -std=gnu99 -DMAX_LOG_LINE=1500000
+COMPILE_EXE = -g -Wall
 
 CFLAGS = $(INCS) $(COMPILE_EXE)
 
@@ -10,8 +9,8 @@ LINK_EXE = -Wl,-rpath=. -Wall
 LIBS = $(LINK_EXE) 
 
 
-SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
+SRCS = $(wildcard *.cpp)
+OBJS = $(SRCS:.cpp=.o)
 BIN = ./topn
 
 RM = rm -f
@@ -26,6 +25,6 @@ all: $(OBJS)
 clean:
 	$(RM) $(OBJS) $(BIN)
 
-%.o: %.c
+%.o: %.cpp
 	$(CXX) $(CFLAGS) -c -o $@ $<
 

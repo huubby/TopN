@@ -28,7 +28,7 @@ typedef struct _hash_table_iter hash_table_iter;
  *@param in     value_destroy_func  当从哈希表中移除一条数据时，负责释放由value指向的内存
  *@return       新哈希表
  */
-hash_table_t* hash_table_new(/*uint size,*/ hash_func hash_func,
+hash_table_t* hash_table_new(/*uint size,*/ hash_func hfunc,
         compare_func key_compare_func, void *user_data, destroy_func key_destroy_func,
         destroy_func value_destroy_func);
 
@@ -208,7 +208,7 @@ void hash_table_resize(hash_table_t *hash_table);
 /* 哈希函数
  */
 uint str_hash(const void *v);
-uint int_hash(const void *v);
+uint int32_hash(const void *v);
 uint int64_hash(const void *v);
 uint double_hash(const void *v);
 uint direct_hash(const void *v);

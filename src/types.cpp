@@ -13,6 +13,35 @@ void default_destroy_func(void* data)
     mem_free(data);
 }
 
+
+int int32_compare_func(const void *a, const void *b, void *user_data)
+{
+    int32_t v1 = *((const int32_t*) a);
+    int32_t v2 = *((const int32_t*) b);
+
+    if (v1 > v2) {
+        return 1;
+    } else if (v1 == v2) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+int uint32_compare_func(const void *a, const void *b, void *user_data)
+{
+    uint32_t v1 = *((const uint32_t*) a);
+    uint32_t v2 = *((const uint32_t*) b);
+
+    if (v1 > v2) {
+        return 1;
+    } else if (v1 == v2) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+
 int int_compare_func(const void *a, const void *b, void *user_data)
 {
     int v1 = *((const int*) a);

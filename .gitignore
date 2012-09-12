@@ -1,12 +1,10 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
-
-# Compiled Dynamic libraries
-*.so
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+.gitignore
+Debug/
+debug/
+Release/
+release/
+src/*.o
+src/topn
+src/.settings/
+src/.project
+src/.cproject

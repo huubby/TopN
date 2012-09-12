@@ -31,7 +31,7 @@ extern "C" {
 char * strtrim(char *str, int strlen);
 
 
-void* memdup(const void *mem, uint size);
+extern void* memdup(const void *mem, uint size);
 
 /*
  *@brief        分割字符串

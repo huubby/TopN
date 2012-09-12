@@ -182,7 +182,7 @@ void calc(uint32_t start, uint32_t end) {
 	}
 }
 
-int main(int argc, char **argv) {
+int main1(int argc, char **argv) {
 
 	if (argc < 2) {
 		cout << "usage: merge input_file1 input_file2 ..." << endl;

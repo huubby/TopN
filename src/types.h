@@ -1,3 +1,11 @@
+/**
+ *Author:           wuyangchun
+ *Date:             2012-06-01
+ *Description:
+ *
+ *Notice:
+ **/
+
 
 #ifndef CLIB_TYPES_H_
 #define CLIB_TYPES_H_
@@ -14,7 +22,7 @@ extern "C" {
 #define false (0)
 #define true (!false)
 typedef int bool;
-#endif
+#endif 
 
 typedef unsigned int uint;
 
@@ -67,12 +75,16 @@ typedef bool (*traverse_pair_func)(void *key, void *value, void *user_data);
 extern void default_destroy_func(void* data);
 
 //已经实现的几种常见数据类型的比较函数
+extern int int32_compare_func(const void *a, const void *b, void *user_data);
+extern int uint32_compare_func(const void *a, const void *b, void *user_data);
 extern int int_compare_func(const void *a, const void *b, void *user_data);
 extern int uint_compare_func(const void *a, const void *b, void *user_data);
 extern int str_compare_func(const void *a, const void *b, void *user_data);
 extern int double_compare_func(const void *a, const void *b, void *user_data);
 extern int int64_compare_func(const void *a, const void *b, void *user_data);
 extern int direct_compare_func(const void *a, const void *b, void *user_data);
+extern int ip_compare_func(const void *a, const void *b, void *user_data);
+
 
 #ifdef __cplusplus
 }
