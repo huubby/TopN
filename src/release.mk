@@ -1,0 +1,3 @@
+MODE = REL
+
+include Makefile

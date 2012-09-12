@@ -5,13 +5,10 @@
  *      Author: Administrator
  */
 
-#include "hash_table.h"
-//#include "memcache.h>
-#include "memory.h"
 #include <stdlib.h>
+#include <string.h>
 #include "log.h"
-#include "string.h"
-#include <strings.h>
+#include "hash_table.h"
 
 #define HASH_TABLE_MIN_SHIFT 3  /* 1 << 3 == 8 buckets */
 
@@ -52,6 +49,19 @@ static const int prime_mod[] = { 1, /* For 1 << 0 */
 131071, 262139, 524287, 1048573, 2097143, 4194301, 8388593, 16777213, 33554393,
         67108859, 134217689, 268435399, 536870909, 1073741789, 2147483647 /* For 1 << 31 */
 };
+
+void* memdup(const void *mem, uint size)
+{
+    void *new_mem;
+
+    if (mem) {
+        new_mem = malloc(size);
+        memcpy(new_mem, mem, size);
+    } else
+        new_mem = NULL;
+
+    return new_mem;
+}
 
 static void hash_table_set_shift(hash_table_t *hash_table, int shift)
 {

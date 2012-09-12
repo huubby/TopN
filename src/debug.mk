@@ -1,0 +1,3 @@
+MODE = DBG
+
+include Makefile

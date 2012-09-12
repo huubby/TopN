@@ -1,29 +1,48 @@
-CXX = g++
+FILTER_OUT=$(foreach v, $(2), $(if $(findstring $(1), $(v)),,$(v)))
 
-COMPILE_EXE = -g -Wall -DMAX_LOG_LINE=1500000
+DBG_BUILD_DIR=../_builddbg
+REL_BUILD_DIR=../_build
 
-CFLAGS = $(INCS) $(COMPILE_EXE)
+ifeq ($(MODE), REL)
+COMPILE_OPTIONS=-DNDEBUG -O2
+BUILD_DIR=$(REL_BUILD_DIR)
+else
+COMPILE_OPTIONS=-DDEBUG -D_DEBUG -fstack-check -g -ggdb 
+BUILD_DIR=$(DBG_BUILD_DIR)
+endif
+WARNING_OPTIONS=-Wall -Wpointer-arith
+COMPILE_OPTIONS += -ansi -DMAX_LOG_LINE=1500000 -DLINUX $(WARNING_OPTIONS)
+LINK_OPTIONS=-Wl,-rpath=.
+INCLUDES=-I../include
 
-LINK_EXE = -Wl,-rpath=. -Wall 
+AR_OPTIONS=rc 
 
-LIBS = $(LINK_EXE) 
+CFLAGS=$(COMPILE_OPTIONS) $(INCLUDES)
 
-
-SRCS = $(wildcard *.cpp)
-OBJS = $(SRCS:.cpp=.o)
-BIN = ./topn
-
-RM = rm -f
-
-
-.PHONY: all clean
+SRCS=$(wildcard *.cpp)
+OBJS=$(addprefix $(BUILD_DIR)/, $(SRCS:.cpp=.o))
+LIB=$(BUILD_DIR)/libtopn.a
+MAIN=main
+EXE=$(addprefix $(BUILD_DIR)/, Analyzer)
 
 
-all: $(OBJS)
-	$(CXX) $(OBJS) -o $(BIN) $(LIBS)
+.PHONY: all clean debug release
+
+debug: all
+release: all
+all: $(EXE) $(LIB)
+
+$(EXE) : $(OBJS)
+	$(CXX) -o $@ $^ $(LINK_OPTIONS)
+
+$(BUILD_DIR):
+	mkdir $@
+
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+	$(CXX) $(CFLAGS) -c -o $@ $<
+
+$(LIB): $(OBJS) | $(BUILD_DIR)
+	$(AR) $(AR_OPTIONS) $@ $(call FILTER_OUT, $(MAIN), $^)
 
 clean:
-	$(RM) $(OBJS) $(BIN)
-
-%.o: %.cpp
-	$(CXX) $(CFLAGS) -c -o $@ $<
+	-$(RM) -r $(DBG_BUILD_DIR) $(REL_BUILD_DIR)

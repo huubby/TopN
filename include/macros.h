@@ -7,6 +7,21 @@
 #ifndef CLIB_MACROS_H_
 #define CLIB_MACROS_H_
 
+#include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define mem_alloc(x) malloc(x)
+#define mem_free(m) free(m)
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
 #define MAX_FILE_NAME_LEN 256           //最大文件名称长度
 #define MAX_PATH_NAME_LEN 1024          //最大文件路径长度
 #define MAX_PATITION_NAME_LEN 64        //最大分区名称长度
