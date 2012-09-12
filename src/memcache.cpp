@@ -64,7 +64,7 @@ static inline unsigned int reciprocal_divide(unsigned long long A, unsigned int 
     return (unsigned int)(((unsigned long long)A * R) >> 32);
 }
 
-#endif 
+#endif
 
 unsigned int reciprocal_value(unsigned int k)
 {
@@ -82,7 +82,7 @@ static inline unsigned int obj_to_index(mem_cache_t *pc,
 static inline void *index_to_obj(mem_cache_t *pc, struct mem_obj *po,
         unsigned int idx)
 {
-    return po->obj + idx * pc->obj_size;
+    return (char*)po->obj + idx * pc->obj_size;
 }
 
 mem_cache_t *mem_cache_create(int obj_size, int cache_size)
@@ -159,14 +159,14 @@ static int cache_grow(mem_cache_t *p)
         LOG(LOG_LEVEL_ERROR, "%s", "malloc error!!");
         return -1;
     }
-    po->obj = (void *) po->obj_ctl + sizeof(po->obj_free) * p->cache_size;
+    po->obj = (char *) po->obj_ctl + sizeof(po->obj_free) * p->cache_size;
     for (int i = 0; i < p->cache_size; i++) {
         po->obj_ctl[i] = i + 1;
     }
     po->size = p->cache_size;
     po->inuse = 0;
     po->obj_free = 0;
-    po->end = (void *) po->obj_ctl
+    po->end = (char *) po->obj_ctl
             + (p->obj_size + sizeof(po->obj_free)) * p->cache_size;
 
     direct_add: po->next = p->list;

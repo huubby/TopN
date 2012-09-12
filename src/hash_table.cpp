@@ -595,7 +595,7 @@ uint double_hash(const void *v)
 
 uint direct_hash(const void *v)
 {
-    return (uint) v;
+    return (long) v;
 }
 
 
