@@ -16,35 +16,63 @@
 #include "log.h"
 #include "cmdparse.h"
 
+//-------------------- Command Line Arguments ----------------------
 static char *log_file = NULL;
+static char *w_list = NULL;
+static char *b_list = NULL;
+
 static char *c_list = NULL;
-static char *result_file = NULL;
+static char *c80_list = NULL;
+static char *c443_list = NULL;
+static char *c8080_list = NULL;
 CommandLineOptions_t options[] = {
     { "f", "The name of NAT log file waiting for processing"
         , "log file name", OPTION_REQUIRED, ARG_STR, &log_file },
+    { "w", "The name of w.list file"
+        , "w.list name", OPTION_REQUIRED, ARG_STR, &w_list },
+    { "b", "The name of b.list file"
+        , "b.list name", OPTION_REQUIRED, ARG_STR, &b_list },
     { "c", "The name of c.list file"
-        , "c.list name", OPTION_REQUIRED, ARG_STR, &c_list },
-    { "o", "The output file name"
-        , "output file name", OPTION_REQUIRED, ARG_STR, &result_file },
+        , "c.list name", OPTION_OPTIONAL, ARG_STR, &c_list },
+    { "c80", "The name of c.list.80 file"
+        , "c.list.80 name", OPTION_OPTIONAL, ARG_STR, &c80_list },
+    { "c443", "The name of c.list.443 file"
+        , "c.list.443 name", OPTION_OPTIONAL, ARG_STR, &c443_list },
+    { "c8080", "The name of c.list.8080 file"
+        , "c.list.8080 name", OPTION_OPTIONAL, ARG_STR, &c8080_list },
     {NULL, NULL, NULL, 0, 0, NULL}
 };
 static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
 
+//--------------------- Global Datas -------------------------------
+#pragma pack(4)
+typedef struct {
+    uint32_t count;
+    uint64_t bytes;
+} logrecord_t;
+#pragma pack()
+
+const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 static mem_cache_t *key_cache = NULL;
 static mem_cache_t *value_cache = NULL;
+
+static hash_table_t *wb_list_map = NULL;
 
 static hash_table_t *tcp80_map = NULL;
 static hash_table_t *tcp443_map = NULL;
 static hash_table_t *tcp8080_map = NULL;
 static hash_table_t *regular_map = NULL;
 
-static hash_table_t *white_list = NULL;
-static hash_table_t *black_list = NULL;
+typedef enum {
+    REGULAR_PORT = 0
+    , TCP_PORT_80
+    , TCP_PORT_443
+    , TCP_PORT_8080
+} port_type_t;
 
-bool build_maps_from_ct_list();
+bool build_wb_list(const char *filename);
+bool build_maps_from_c_list(const char *filename, port_type_t type);
 bool process(const char *log, uint32_t len);
-
-const uint32_t MAX_LINE_COUNT = 1500000;
 
 int main(int argc, char*argv[])
 {
@@ -58,18 +86,27 @@ int main(int argc, char*argv[])
         exit(-1);
     }
     if (strlen(log_file) == 0
-        || strlen(result_file) == 0
-        || strlen(c_list) == 0
-        ) {
+        || strlen(w_list) == 0
+        || strlen(b_list) == 0) {
         LOG(LOG_LEVEL_ERROR, "Empty file name");
         exit(-1);
     }
+    if (strlen(c_list) == 0
+        || strlen(c80_list) == 0
+        || strlen(c443_list) == 0
+        || strlen(c8080_list) == 0 ) {
+        LOG(LOG_LEVEL_WARNING, "Some of c.list missed");
+    }
 
-    //TODO build c.list/t.list
-    // build_maps_from_ct_list();
-
-    //TODO build white/black list
-    // build_wb_list();
+    if (!build_wb_list(w_list)
+        || !build_wb_list(b_list)
+        || !build_maps_from_c_list(c_list, REGULAR_PORT)
+        || !build_maps_from_c_list(c80_list, TCP_PORT_80)
+        || !build_maps_from_c_list(c443_list, TCP_PORT_443)
+        || !build_maps_from_c_list(c8080_list, TCP_PORT_8080)) {
+        LOG(LOG_LEVEL_ERROR, "Build maps failed");
+        exit(-1);
+    }
 
     input_file = fopen(log_file, "r");
     if (!input_file) {
@@ -95,33 +132,27 @@ int main(int argc, char*argv[])
 }
 
 //----------------------- Functions -----------------------
-typedef struct {
-    uint32_t count;
-    uint64_t bytes;
-} logrecord_t;
-
-typedef enum {
-    REGULAR_PORT = 0
-    , TCP_PORT_80
-    , TCP_PORT_443
-    , TCP_PORT_8080
-} port_type_t;
-
 
 void init_caches(uint32_t count)
 {
     if (count == 0) count = MAX_LINE_COUNT;
-
     assert(count > 0);
 
-    // TODO Init 80/443/8080 and all others 4 memcaches and hash_maps...
-    //key_cache = mem_cache_create(sizeof(uint32_t), MAX_LINE_COUNT);
-    //value_cache = mem_cache_create(sizeof(logrecord_t), MAX_LINE_COUNT);
+    assert(key_cache == NULL);
+    assert(value_cache == NULL);
 
+// TODO Create cache 4 times as MAX_LINE_COUNT, not enough/overflow aware
+    key_cache = mem_cache_create(sizeof(uint32_t), 4*MAX_LOG_LINE);
+    value_cache = mem_cache_create(sizeof(logrecord_t), 4*MAX_LOG_LINE);
+
+    assert(regular_map == NULL);
+    assert(tcp80_map == NULL);
+    assert(tcp443_map == NULL);
+    assert(tcp8080_map == NULL);
+    regular_map = hash_table_new(int_hash, int_compare_func, NULL, NULL, NULL);
     tcp80_map = hash_table_new(int_hash, int_compare_func, NULL, NULL, NULL);
     tcp443_map = hash_table_new(int_hash, int_compare_func, NULL, NULL, NULL);
     tcp8080_map = hash_table_new(int_hash, int_compare_func, NULL, NULL, NULL);
-    regular_map = hash_table_new(int_hash, int_compare_func, NULL, NULL, NULL);
 }
 
 hash_table_t* get_map_by_type(port_type_t type)
@@ -228,5 +259,37 @@ bool process(const char *log, uint32_t len)
     }
     record2map(&addr, &record, type);
 
+    return true;
+}
+
+bool build_wb_list(const char *filename)
+{
+    size_t      len;
+    ssize_t     linelen = 0;
+    char        *line = NULL;
+
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        LOG(LOG_LEVEL_ERROR, "Open %s failed", filename);
+        return false;
+    }
+    assert(file != NULL);
+
+    linelen = getline(&line, &len, file);
+    while (linelen != -1) {
+        //TODO parse every line, save to wb_list_map...
+
+        //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
+    }
+
+    if (line)
+        free(line);
+
+    fclose(file);
+    return true;
+}
+
+bool build_maps_from_c_list(const char *filename, port_type_t type)
+{
     return true;
 }

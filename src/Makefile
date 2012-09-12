@@ -1,7 +1,7 @@
 #Project: Uba
 CXX = gcc
 
-COMPILE_EXE = -g -Wall -std=gnu99 
+COMPILE_EXE = -g -Wall -std=gnu99 -DMAX_LOG_LINE=1500000
 
 CFLAGS = $(INCS) $(COMPILE_EXE)
 
