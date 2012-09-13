@@ -15,6 +15,7 @@
 #include "log.h"
 #include "cmdparse.h"
 #include "nat_log_parser.h"
+#include "clist_parser.h"
 
 //-------------------- Command Line Arguments ----------------------
 static char *log_file = NULL;
@@ -56,8 +57,8 @@ static hash_table_t *tcp443_map = NULL;
 static hash_table_t *tcp8080_map = NULL;
 static hash_table_t *regular_map = NULL;
 
+void init_caches(uint32_t count);
 bool build_wb_list(const char *filename);
-bool build_maps_from_c_list(const char *filename, port_type_t type);
 bool process(const char *log, uint32_t len);
 
 int main(int argc, char*argv[])
@@ -84,12 +85,14 @@ int main(int argc, char*argv[])
         LOG(LOG_LEVEL_WARNING, "Some of c.list missed");
     }
 
+    init_caches(0);
+
     if (!build_wb_list(w_list)
         || !build_wb_list(b_list)
-        || !build_maps_from_c_list(c_list, REGULAR_PORT)
-        || !build_maps_from_c_list(c80_list, TCP_PORT_80)
-        || !build_maps_from_c_list(c443_list, TCP_PORT_443)
-        || !build_maps_from_c_list(c8080_list, TCP_PORT_8080)) {
+        || !build_map_from_c_list(c_list, regular_map)
+        || !build_map_from_c_list(c80_list, tcp80_map)
+        || !build_map_from_c_list(c443_list, tcp443_map)
+        || !build_map_from_c_list(c8080_list, tcp8080_map)) {
         LOG(LOG_LEVEL_ERROR, "Build maps failed");
         exit(-1);
     }
@@ -106,6 +109,7 @@ int main(int argc, char*argv[])
             && line_count < MAX_LINE_COUNT
             && process_result) {
         //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
+        line[linelen-1] = '\0';
         process_result = process(line, len);
         line_count++;
         linelen = getline(&line, &len, input_file);
@@ -164,6 +168,8 @@ bool
 record2map(const uint32_t *addr, const logrecord_t *record, port_type_t type)
 {
     hash_table_t *map = get_map_by_type(type);
+    if (!map)
+        return false;
     //TODO Set the real number when reading from c.list/c.list.80/c.list.443/c.list.8080
     // Current just set the initilized size to 0, using MAX_LINE_COUNT
 
@@ -182,44 +188,6 @@ record2map(const uint32_t *addr, const logrecord_t *record, port_type_t type)
     return true;
 }
 
-bool
-parse_c_list(const char *line, size_t len, port_type_t type)
-{
-    //TODO
-    // 1. parse record from middle result line
-    // 2. record saved to map
-    return true;
-}
-
-bool build_maps_from_ct_list(const char *file_name, port_type_t type)
-{
-    size_t      len;
-    ssize_t     linelen = 0;
-    char        *line = NULL;
-    bool        process_result = true;
-
-    FILE *file = fopen(file_name, "r");
-    if (!file) {
-        LOG(LOG_LEVEL_ERROR, "Open %s failed", file_name);
-        return false;
-    }
-    assert(file != NULL);
-
-    linelen = getline(&line, &len, file);
-    while (linelen != -1 && process_result) {
-        process_result = parse_c_list(line, len, type);
-
-        //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
-    }
-
-    if (line)
-        free(line);
-
-    fclose(file);
-
-    return true;
-}
-
 bool process(const char *log, uint32_t len)
 {
     //time_t start = time(NULL);
@@ -233,9 +201,9 @@ bool process(const char *log, uint32_t len)
     if (!parse_log(log, &addr, &record, &type))
         return true;    // Ignore this line, continue to next
 
-    if (key_cache == NULL) {
-        init_caches(0);
-    }
+    // TODO Test if the addr could be reached
+    // ...
+
     record2map(&addr, &record, type);
 
     return true;
@@ -265,10 +233,5 @@ bool build_wb_list(const char *filename)
         free(line);
 
     fclose(file);
-    return true;
-}
-
-bool build_maps_from_c_list(const char *filename, port_type_t type)
-{
     return true;
 }

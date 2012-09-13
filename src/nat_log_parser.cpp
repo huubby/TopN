@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include "ipmask.h"
 #include "nat_log_parser.h"
 
 bool identify_protocol_ip_port(const char *log
@@ -19,7 +20,6 @@ bool identify_protocol_ip_port(const char *log
     const char *port_8080 = "8080";
     const size_t port8080_len = strlen(port_8080);
     const char *blank = " ";
-    const int max_ip_len = 15; // xxx.xxx.xxx.xxx
 
     *addr = 0;
     *end = (char *)log;
@@ -54,7 +54,7 @@ bool identify_protocol_ip_port(const char *log
     port_loc += port_name_len;
     // No blank following "dport="
     blank_loc = strstr(port_loc, " ");
-    if (blank == NULL)
+    if (blank_loc == NULL)
         return false;
 
     char port[16] = {0}; // No port number longer than 16 characters

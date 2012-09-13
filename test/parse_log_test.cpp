@@ -18,6 +18,7 @@ main(int argc, char *argv[])
     char        *line = NULL;
     ssize_t linelen = getline(&line, &len, input_file);
     while (linelen != -1) {
+        line[linelen-1]='\0';
         uint32_t addr = 0;
         logrecord_t record;
         port_type_t type;
