@@ -5,10 +5,11 @@
 #include "hash_table.h"
 #include "log.h"
 #include "ipmask.h"
+#include "caches_maps.h"
 #include "clist_parser.h"
 
 bool
-parse_c_list(const char *line, int len, hash_table_t *map)
+parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
 {
     //TODO
     // 1. parse record from middle result line
@@ -20,8 +21,7 @@ parse_c_list(const char *line, int len, hash_table_t *map)
     char ip[max_ip_len];
     strncpy(ip, line, tab_loc-line);
     ip[tab_loc-line] = '\0';
-    uint32_t addr;
-    if (inet_pton(AF_INET, ip, &addr) <= 0) {
+    if (inet_pton(AF_INET, ip, addr) <= 0) {
         return false;
     }
 
@@ -36,27 +36,22 @@ parse_c_list(const char *line, int len, hash_table_t *map)
     strncpy(bytes, traffic_loc, tab_loc-traffic_loc);
     bytes[tab_loc-traffic_loc] = '\0';
     char *endptr = NULL;
-    uint64_t bytes_num = strtoull(bytes, &endptr, 10);
+    record->bytes = strtoull(bytes, &endptr, 10);
     if (endptr != NULL)
         return false;  // Invalid number
 
     while (*(++tab_loc) == '\t');
     if (tab_loc - line > len)
         return false;
-    uint32_t sessions = strtoull(tab_loc, &endptr, 10);
+    record->count = strtoull(tab_loc, &endptr, 10);
     if (endptr != NULL)
         return false;  // Invalid number
-
-    // TODO Add new record to map
 
     return true;
 }
 
-bool build_map_from_c_list(const char *file_name, hash_table_t *map)
+bool build_map_from_c_list(const char *file_name, port_type_t type)
 {
-    if (!map)
-        return false;
-
     size_t      len;
     ssize_t     linelen = 0;
     char        *line = NULL;
@@ -72,7 +67,11 @@ bool build_map_from_c_list(const char *file_name, hash_table_t *map)
     linelen = getline(&line, &len, file);
     while (linelen != -1 && process_result) {
         line[linelen-1]='\0';
-        process_result = parse_c_list(line, len, map);
+        uint32_t addr;
+        logrecord_t record;
+        process_result = parse_c_list(line, len, &addr, &record);
+        if (process_result)
+            process_result = record2map(addr, &record, type);
 
         //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
     }

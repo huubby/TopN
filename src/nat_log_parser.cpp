@@ -37,7 +37,7 @@ bool identify_protocol_ip_port(const char *log
         return false;
 
     dst_ip_loc += dst_ip_name_len;
-    blank_loc = strstr(dst_ip_loc, " ");
+    blank_loc = strstr(dst_ip_loc, blank);
     if (blank_loc == NULL || blank_loc-dst_ip_loc > max_ip_len)
         return false;   // No blank following "dst=", or ip len is incorrect
     char dst_ip[max_ip_len];

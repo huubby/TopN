@@ -1,21 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
 #include <assert.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include "types.h"
-#include "hash_table.h"
-#include "topn.h"
-#include "memcache.h"
-#include "memory.h"
+#include <string.h>
 #include "log.h"
 #include "cmdparse.h"
 #include "nat_log_parser.h"
 #include "clist_parser.h"
+#include "caches_maps.h"
 
 //-------------------- Command Line Arguments ----------------------
 static char *log_file = NULL;
@@ -47,18 +37,6 @@ static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
 
 //--------------------- Global Datas -------------------------------
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
-static mem_cache_t *key_cache = NULL;
-static mem_cache_t *value_cache = NULL;
-
-static hash_table_t *wb_list_map = NULL;
-
-static hash_table_t *tcp80_map = NULL;
-static hash_table_t *tcp443_map = NULL;
-static hash_table_t *tcp8080_map = NULL;
-static hash_table_t *regular_map = NULL;
-
-void init_caches(uint32_t count);
-bool build_wb_list(const char *filename);
 bool process(const char *log, uint32_t len);
 
 int main(int argc, char*argv[])
@@ -89,10 +67,10 @@ int main(int argc, char*argv[])
 
     if (!build_wb_list(w_list)
         || !build_wb_list(b_list)
-        || !build_map_from_c_list(c_list, regular_map)
-        || !build_map_from_c_list(c80_list, tcp80_map)
-        || !build_map_from_c_list(c443_list, tcp443_map)
-        || !build_map_from_c_list(c8080_list, tcp8080_map)) {
+        || !build_map_from_c_list(c_list, REGULAR_PORT)
+        || !build_map_from_c_list(c80_list, TCP_PORT_80)
+        || !build_map_from_c_list(c443_list, TCP_PORT_443)
+        || !build_map_from_c_list(c8080_list, TCP_PORT_8080)) {
         LOG(LOG_LEVEL_ERROR, "Build maps failed");
         exit(-1);
     }
@@ -124,70 +102,6 @@ int main(int argc, char*argv[])
 
 //----------------------- Functions -----------------------
 
-void init_caches(uint32_t count)
-{
-    if (count == 0) count = MAX_LINE_COUNT;
-    assert(count > 0);
-
-    assert(key_cache == NULL);
-    assert(value_cache == NULL);
-
-// TODO Create cache 4 times as MAX_LINE_COUNT, not enough/overflow aware
-    key_cache = mem_cache_create(sizeof(uint32_t), 4*MAX_LOG_LINE);
-    value_cache = mem_cache_create(sizeof(logrecord_t), 4*MAX_LOG_LINE);
-
-    assert(regular_map == NULL);
-    assert(tcp80_map == NULL);
-    assert(tcp443_map == NULL);
-    assert(tcp8080_map == NULL);
-    regular_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-    tcp80_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-    tcp443_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-    tcp8080_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-}
-
-hash_table_t* get_map_by_type(port_type_t type)
-{
-    switch (type) {
-        case REGULAR_PORT:
-            return regular_map;
-        case TCP_PORT_80:
-            return tcp80_map;
-        case TCP_PORT_443:
-            return tcp443_map;
-        case TCP_PORT_8080:
-            return tcp8080_map;
-        default:
-            assert(false);
-    }
-
-    return NULL;
-}
-
-bool
-record2map(const uint32_t *addr, const logrecord_t *record, port_type_t type)
-{
-    hash_table_t *map = get_map_by_type(type);
-    if (!map)
-        return false;
-    //TODO Set the real number when reading from c.list/c.list.80/c.list.443/c.list.8080
-    // Current just set the initilized size to 0, using MAX_LINE_COUNT
-
-    logrecord_t* original_record = (logrecord_t*) hash_table_lookup(map, addr);
-    if (original_record == NULL) {
-        uint32_t* ip = (uint32_t* )mem_cache_alloc(key_cache);
-        original_record = (logrecord_t* )mem_cache_alloc(value_cache);
-        *original_record = *record;
-        *ip = *addr;
-        hash_table_insert(map, ip, original_record);
-    } else {
-        original_record->count += record->count;
-        original_record->bytes += record->bytes;
-    }
-
-    return true;
-}
-
 bool process(const char *log, uint32_t len)
 {
     //time_t start = time(NULL);
@@ -204,34 +118,8 @@ bool process(const char *log, uint32_t len)
     // TODO Test if the addr could be reached
     // ...
 
-    record2map(&addr, &record, type);
+    record2map(addr, &record, type);
 
     return true;
 }
 
-bool build_wb_list(const char *filename)
-{
-    size_t      len;
-    ssize_t     linelen = 0;
-    char        *line = NULL;
-
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        LOG(LOG_LEVEL_ERROR, "Open %s failed", filename);
-        return false;
-    }
-    assert(file != NULL);
-
-    linelen = getline(&line, &len, file);
-    while (linelen != -1) {
-        //TODO parse every line, save to wb_list_map...
-
-        //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
-    }
-
-    if (line)
-        free(line);
-
-    fclose(file);
-    return true;
-}

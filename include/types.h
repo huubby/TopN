@@ -14,6 +14,20 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#pragma pack(4)
+typedef struct {
+    uint32_t count;
+    uint64_t bytes;
+} logrecord_t;
+#pragma pack()
+
+typedef enum {
+    REGULAR_PORT = 0
+    , TCP_PORT_80
+    , TCP_PORT_443
+    , TCP_PORT_8080
+} port_type_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,7 +36,7 @@ extern "C" {
 #define false (0)
 #define true (!false)
 typedef int bool;
-#endif 
+#endif
 
 typedef unsigned int uint;
 
