@@ -64,8 +64,8 @@ bool build_map_from_c_list(const char *file_name, port_type_t type)
     }
     assert(file != NULL);
 
-    linelen = getline(&line, &len, file);
-    while (linelen != -1 && process_result) {
+    while ( (linelen = getline(&line, &len, file)) != -1
+            && process_result) {
         line[linelen-1]='\0';
         uint32_t addr;
         logrecord_t record;

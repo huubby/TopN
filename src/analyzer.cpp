@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <linux/limits.h>
 #include "log.h"
 #include "cmdparse.h"
 #include "nat_log_parser.h"
@@ -37,16 +38,12 @@ static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
 
 //--------------------- Global Datas -------------------------------
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
-bool process(const char *log, uint32_t len);
+const uint32_t MAX_PATH_LEN = (PATH_MAX-4); //counting the backup suffix, "orig"
+bool process_logfile();
+bool output();
 
 int main(int argc, char*argv[])
 {
-    FILE        *input_file;
-    size_t      len;
-    ssize_t     linelen = 0;
-    uint32_t    line_count = 0;
-    char        *line = NULL;
-    bool        process_result = true;
     if (init_application(argc, argv, options, description) < 0) {
         exit(-1);
     }
@@ -56,11 +53,22 @@ int main(int argc, char*argv[])
         LOG(LOG_LEVEL_ERROR, "Empty file name");
         exit(-1);
     }
-    if (strlen(c_list) == 0
-        || strlen(c80_list) == 0
-        || strlen(c443_list) == 0
-        || strlen(c8080_list) == 0 ) {
+    if (!c_list || strlen(c_list) == 0
+        || !c80_list || strlen(c80_list) == 0
+        || !c443_list || strlen(c443_list) == 0
+        || !c8080_list || strlen(c8080_list) == 0 ) {
         LOG(LOG_LEVEL_WARNING, "Some of c.list missed");
+        c_list = "c.list";
+        c80_list = "c80.list";
+        c443_list = "c443.list";
+        c8080_list = "c8080.list";
+    }
+
+    if (strlen(c_list) > MAX_PATH_LEN
+        || strlen(c80_list) > MAX_PATH_LEN
+        || strlen(c443_list) > MAX_PATH_LEN
+        || strlen(c8080_list) > MAX_PATH_LEN) {
+        LOG(LOG_LEVEL_WARNING, "Some of c.list name length too long");
     }
 
     init_caches(0);
@@ -75,51 +83,116 @@ int main(int argc, char*argv[])
         exit(-1);
     }
 
-    input_file = fopen(log_file, "r");
-    if (!input_file) {
-        LOG(LOG_LEVEL_ERROR, "Open log file failed");
+    if (!process_logfile()) {
+        LOG(LOG_LEVEL_ERROR, "Process log file failed");
         exit(-1);
     }
-    assert(input_file != NULL);
 
-    linelen = getline(&line, &len, input_file);
-    while (linelen != -1
-            && line_count < MAX_LINE_COUNT
-            && process_result) {
-        //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
-        line[linelen-1] = '\0';
-        process_result = process(line, len);
-        line_count++;
-        linelen = getline(&line, &len, input_file);
+    if (!output()) {
+        LOG(LOG_LEVEL_ERROR, "Output failed");
+        exit(-1);
     }
-
-    if (line)
-        free(line);
-    fclose(input_file);
 
     return 0;
 }
 
 //----------------------- Functions -----------------------
 
-bool process(const char *log, uint32_t len)
+bool process_logfile()
 {
     //time_t start = time(NULL);
     //srand(start);
 
-    uint32_t addr;
-    logrecord_t record;
-    port_type_t type;
+    FILE        *input_file;
+    size_t      len;
+    ssize_t     linelen = 0;
+    uint32_t    line_count = 0;
+    char        *line = NULL;
+    bool        process_result = true;
+    input_file = fopen(log_file, "r");
+    if (!input_file) {
+        LOG(LOG_LEVEL_ERROR, "Open log file failed");
+        return false;
+    }
+    assert(input_file != NULL);
 
-    //TODO Maybe add a counter here to record all ignored lines
-    if (!parse_log(log, &addr, &record, &type))
-        return true;    // Ignore this line, continue to next
+    linelen = getline(&line, &len, input_file);
+    while ((linelen = getline(&line, &len, input_file)) != -1
+            && ++line_count < MAX_LINE_COUNT
+            && process_result) {
+        //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
+        line[linelen-1] = '\0';
 
-    // TODO Test if the addr could be reached
-    // ...
+        uint32_t addr;
+        logrecord_t record;
+        port_type_t type;
 
-    record2map(addr, &record, type);
+        //TODO Maybe add a counter here to record all ignored lines
+        if (!parse_log(line, &addr, &record, &type) || ip_in_wb_list(addr))
+            continue;    // Ignore this line, continue to next
+
+        bool valiable = false;
+        if (type == TCP_PORT_80
+            || type == TCP_PORT_443
+            || type == TCP_PORT_8080) {
+            // TODO Test if the addr could be reached
+            // ...
+        }
+
+        if (valiable)
+            record2map(addr, &record, type);
+    }
+
+    if (line)
+        free(line);
+    fclose(input_file);
 
     return true;
 }
 
+bool output()
+{
+    const char *suffix = ".orig";
+
+    char *name = new char[PATH_MAX];
+    if (name == NULL) {
+        LOG(LOG_LEVEL_ERROR, "Memory allocation failed");
+        return false;
+    }
+    sprintf(name, "%s%s", c_list, suffix);
+    rename(c_list, name);
+    sprintf(name, "%s%s", c80_list, suffix);
+    rename(c80_list, name);
+    sprintf(name, "%s%s", c443_list, suffix);
+    rename(c443_list, name);
+    sprintf(name, "%s%s", c8080_list, suffix);
+    rename(c8080_list, name);
+
+    bool success = false;
+    if ((success = dump_list(TCP_PORT_80, c80_list)
+                    && dump_list(TCP_PORT_443, c443_list)
+                    && dump_list(TCP_PORT_8080, c8080_list)
+                    && dump_list(REGULAR_PORT, c_list))
+        ) {
+        sprintf(name, "%s%s", c_list, suffix);
+        remove(name);
+        sprintf(name, "%s%s", c80_list, suffix);
+        remove(name);
+        sprintf(name, "%s%s", c443_list, suffix);
+        remove(name);
+        sprintf(name, "%s%s", c8080_list, suffix);
+        remove(name);
+    } else {
+        sprintf(name, "%s%s", c_list, suffix);
+        rename(name, c_list);
+        sprintf(name, "%s%s", c80_list, suffix);
+        rename(name, c80_list);
+        sprintf(name, "%s%s", c443_list, suffix);
+        rename(name, c443_list);
+        sprintf(name, "%s%s", c8080_list, suffix);
+        rename(name, c8080_list);
+    }
+
+    delete[] name;
+    return success;
+}

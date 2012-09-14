@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include <ctype.h>
 #include "log.h"
@@ -53,10 +54,14 @@ void init_caches(uint32_t count)
     assert(tcp80_map == NULL);
     assert(tcp443_map == NULL);
     assert(tcp8080_map == NULL);
-    regular_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-    tcp80_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-    tcp443_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
-    tcp8080_map = hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
+    regular_map =
+        hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
+    tcp80_map =
+        hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
+    tcp443_map =
+        hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
+    tcp8080_map =
+        hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
 }
 
 bool
@@ -66,7 +71,8 @@ record2map(uint32_t addr, const logrecord_t *record, port_type_t type)
     if (!map)
         return false;
 
-    logrecord_t* original_record = (logrecord_t*) hash_table_lookup(map, &addr);
+    logrecord_t* original_record =
+            (logrecord_t*) hash_table_lookup(map, &addr);
     if (original_record == NULL) {
         uint32_t* ip = (uint32_t* )mem_cache_alloc(key_cache);
         original_record = (logrecord_t* )mem_cache_alloc(value_cache);
@@ -79,6 +85,11 @@ record2map(uint32_t addr, const logrecord_t *record, port_type_t type)
     }
 
     return true;
+}
+
+bool ip_in_wb_list(uint32_t ip)
+{
+    return hash_table_lookup_extended(wb_list_map, &ip, NULL, NULL);
 }
 
 bool validate_wb(const char *line, int len)
@@ -127,5 +138,34 @@ bool build_wb_list(const char *filename)
         free(line);
 
     fclose(file);
+    return true;
+}
+
+bool dump_record(void *key, void *value, void *user_data)
+{
+    logrecord_t *record = (logrecord_t*)value;
+    char content[128];
+    sprintf(content, "%u\t%lu\t%u"
+            , *(uint32_t*)key, record->bytes, record->count);
+    size_t len = strlen(content);
+    return len != fwrite(content, sizeof(char), len, (FILE *)user_data);
+}
+
+bool dump_list(port_type_t type, const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        LOG(LOG_LEVEL_ERROR, "Open %s for writing failed", filename);
+        return false;
+    }
+    assert(file != NULL);
+
+    hash_table_t *table = get_map_by_type(type);
+    if (table == NULL) {
+        fclose(file);
+        return false;
+    }
+
+    hash_table_foreach(table, dump_record, file);
     return true;
 }
