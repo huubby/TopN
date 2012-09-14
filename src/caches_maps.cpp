@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <assert.h>
+#include <ctype.h>
 #include "log.h"
 #include "hash_table.h"
 #include "memcache.h"
+#include "ipmask.h"
 #include "caches_maps.h"
 
 static mem_cache_t *key_cache = NULL;
@@ -79,6 +81,18 @@ record2map(uint32_t addr, const logrecord_t *record, port_type_t type)
     return true;
 }
 
+bool validate_wb(const char *line, int len)
+{
+    const char *p = line;
+    while (p - line < len) {
+        if (!isalnum(*p) && (*p) != '.')
+            return false;
+
+        p++;
+    }
+    return true;
+}
+
 bool build_wb_list(const char *filename)
 {
     size_t      len;
@@ -92,10 +106,20 @@ bool build_wb_list(const char *filename)
     }
     assert(file != NULL);
 
-    linelen = getline(&line, &len, file);
-    while (linelen != -1) {
-        //TODO parse every line, save to wb_list_map...
+    while ((linelen = getline(&line, &len, file)) != -1) {
+        line[linelen-1] = '\0';
+        if (!validate_wb(line, linelen))
+            continue;
 
+        ip_seg ipseg = get_ip_seg_from_mask_str(line);
+        if (ipseg.end == 0)
+            continue;
+
+        for (uint32_t ip = ipseg.start; ip <= ipseg.end; ip++) {
+            uint32_t* key = (uint32_t* )mem_cache_alloc(key_cache);
+            *key = ip;
+            hash_table_insert(wb_list_map, key, NULL);
+        }
         //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
     }
 
