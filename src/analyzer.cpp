@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <linux/limits.h>
 #include "log.h"
 #include "cmdparse.h"
@@ -26,11 +29,11 @@ CommandLineOptions_t options[] = {
         , "b.list name", OPTION_REQUIRED, ARG_STR, &b_list },
     { "c", "The name of c.list file"
         , "c.list name", OPTION_OPTIONAL, ARG_STR, &c_list },
-    { "c80", "The name of c.list.80 file"
+    { "h", "The name of c.list.80 file"
         , "c.list.80 name", OPTION_OPTIONAL, ARG_STR, &c80_list },
-    { "c443", "The name of c.list.443 file"
+    { "s", "The name of c.list.443 file"
         , "c.list.443 name", OPTION_OPTIONAL, ARG_STR, &c443_list },
-    { "c8080", "The name of c.list.8080 file"
+    { "t", "The name of c.list.8080 file"
         , "c.list.8080 name", OPTION_OPTIONAL, ARG_STR, &c8080_list },
     {NULL, NULL, NULL, 0, 0, NULL}
 };
@@ -39,6 +42,7 @@ static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
 //--------------------- Global Datas -------------------------------
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 const uint32_t MAX_PATH_LEN = (PATH_MAX-4); //counting the backup suffix, "orig"
+bool check_files();
 bool process_logfile();
 bool output();
 
@@ -47,28 +51,9 @@ int main(int argc, char*argv[])
     if (init_application(argc, argv, options, description) < 0) {
         exit(-1);
     }
-    if (strlen(log_file) == 0
-        || strlen(w_list) == 0
-        || strlen(b_list) == 0) {
-        LOG(LOG_LEVEL_ERROR, "Empty file name");
+    if (!check_files()) {
+        LOG(LOG_LEVEL_ERROR, "Invalid parameter(s)");
         exit(-1);
-    }
-    if (!c_list || strlen(c_list) == 0
-        || !c80_list || strlen(c80_list) == 0
-        || !c443_list || strlen(c443_list) == 0
-        || !c8080_list || strlen(c8080_list) == 0 ) {
-        LOG(LOG_LEVEL_WARNING, "Some of c.list missed");
-        c_list = "c.list";
-        c80_list = "c80.list";
-        c443_list = "c443.list";
-        c8080_list = "c8080.list";
-    }
-
-    if (strlen(c_list) > MAX_PATH_LEN
-        || strlen(c80_list) > MAX_PATH_LEN
-        || strlen(c443_list) > MAX_PATH_LEN
-        || strlen(c8080_list) > MAX_PATH_LEN) {
-        LOG(LOG_LEVEL_WARNING, "Some of c.list name length too long");
     }
 
     init_caches(0);
@@ -97,6 +82,90 @@ int main(int argc, char*argv[])
 }
 
 //----------------------- Functions -----------------------
+bool create_file(const char *name)
+{
+    int fd = creat(name, 00666);
+    if (fd == -1) {
+        LOG(LOG_LEVEL_ERROR, "Create file %s failed", name);
+    }
+    return fd != -1;
+}
+
+bool file_exist_valid(const char *name, int mode)
+{
+    assert(name!=NULL);
+    if (!access(name, mode)) {
+        if (errno == ENAMETOOLONG) {
+            LOG(LOG_LEVEL_ERROR, "The file %s name too long", name);
+        } else if (errno == EACCES) {
+            LOG(LOG_LEVEL_ERROR, "The file %s cann't be accessed", name);
+        } else if (errno == ENOTDIR) {
+            LOG(LOG_LEVEL_ERROR
+                    , "A component used as a directory in %s is not"
+                    " a directory"
+                    , name);
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+bool check_file(const char *name, port_type_t type)
+{
+
+    if (!name) {
+        char **list = NULL;
+        if (type == REGULAR_PORT) {
+            name = "c.list";
+            list = &c_list;
+        } else if (type == TCP_PORT_80) {
+            name = "c.list.80";
+            list = &c80_list;
+        } else if (type == TCP_PORT_443) {
+            name = "c.list.443";
+            list = &c443_list;
+        } else if (type == TCP_PORT_8080) {
+            name = "c.list.8080";
+            list = &c8080_list;
+        } else {
+            return false;
+        }
+
+        LOG(LOG_LEVEL_WARNING
+            , "%s is absent, will create it automatically", name);
+
+        if (!create_file(name)) {
+            LOG(LOG_LEVEL_ERROR, "Failed to create %s", name);
+            return false;
+        }
+        *list = (char*)name;
+    }
+    return true;
+}
+
+bool check_files()
+{
+    if (!check_file(c_list, REGULAR_PORT)
+        || !check_file(c80_list, TCP_PORT_80)
+        || !check_file(c443_list, TCP_PORT_443)
+        || !check_file(c8080_list, TCP_PORT_8080)) {
+        return false;
+    }
+
+    if (!file_exist_valid(log_file, R_OK) == 0
+        || !file_exist_valid(w_list, R_OK) == 0
+        || !file_exist_valid(b_list, R_OK) == 0
+        || !file_exist_valid(c_list, R_OK) == 0
+        || !file_exist_valid(c80_list, R_OK) == 0
+        || !file_exist_valid(c443_list, R_OK) == 0
+        || !file_exist_valid(c8080_list, R_OK) == 0) {
+        return false;
+    }
+
+    return true;
+}
 
 bool process_logfile()
 {
@@ -116,7 +185,6 @@ bool process_logfile()
     }
     assert(input_file != NULL);
 
-    linelen = getline(&line, &len, input_file);
     while ((linelen = getline(&line, &len, input_file)) != -1
             && ++line_count < MAX_LINE_COUNT
             && process_result) {
@@ -137,6 +205,7 @@ bool process_logfile()
             || type == TCP_PORT_8080) {
             // TODO Test if the addr could be reached
             // ...
+            valiable = true;
         }
 
         if (valiable)

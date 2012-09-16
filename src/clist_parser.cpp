@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include "hash_table.h"
 #include "log.h"
@@ -24,6 +25,7 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
     if (inet_pton(AF_INET, ip, addr) <= 0) {
         return false;
     }
+    *addr = ntohl(*addr);
 
     while (*(++tab_loc) == '\t');
     if (tab_loc - line > len)
@@ -35,16 +37,17 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
     char bytes[32];
     strncpy(bytes, traffic_loc, tab_loc-traffic_loc);
     bytes[tab_loc-traffic_loc] = '\0';
-    char *endptr = NULL;
-    record->bytes = strtoull(bytes, &endptr, 10);
-    if (endptr != NULL)
+    errno = 0;
+    record->bytes = strtoull(bytes, NULL, 10);
+    if (errno != 0)
         return false;  // Invalid number
 
     while (*(++tab_loc) == '\t');
     if (tab_loc - line > len)
         return false;
-    record->count = strtoull(tab_loc, &endptr, 10);
-    if (endptr != NULL)
+    errno = 0;
+    record->count = strtoull(tab_loc, NULL, 10);
+    if (errno != 0)
         return false;  // Invalid number
 
     return true;
@@ -72,6 +75,8 @@ bool build_map_from_c_list(const char *file_name, port_type_t type)
         process_result = parse_c_list(line, len, &addr, &record);
         if (process_result)
             process_result = record2map(addr, &record, type);
+        else
+            LOG(LOG_LEVEL_WARNING, "A line of %s parsing failed", file_name);
 
         //LOG(LOG_LEVEL_TRACE, "Read a line: %s, length: %zu", line, linelen);
     }

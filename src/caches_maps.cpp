@@ -2,6 +2,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <arpa/inet.h>
 #include "log.h"
 #include "hash_table.h"
 #include "memcache.h"
@@ -50,6 +51,10 @@ void init_caches(uint32_t count)
     key_cache = mem_cache_create(sizeof(uint32_t), 4*MAX_LOG_LINE);
     value_cache = mem_cache_create(sizeof(logrecord_t), 4*MAX_LOG_LINE);
 
+    assert(wb_list_map == NULL);
+    wb_list_map =
+        hash_table_new(int32_hash, int32_compare_func, NULL, NULL, NULL);
+
     assert(regular_map == NULL);
     assert(tcp80_map == NULL);
     assert(tcp443_map == NULL);
@@ -96,7 +101,7 @@ bool validate_wb(const char *line, int len)
 {
     const char *p = line;
     while (p - line < len) {
-        if (!isalnum(*p) && (*p) != '.')
+        if (!isalnum(*p) && (*p) != '.' && (*p) != '\0')
             return false;
 
         p++;
@@ -143,10 +148,15 @@ bool build_wb_list(const char *filename)
 
 bool dump_record(void *key, void *value, void *user_data)
 {
+    uint32_t addr = htonl(*(uint32_t*)key);
+    char ip[16] = {0};
+
+    if (!inet_ntop(AF_INET, &addr, ip, sizeof(ip))) {
+        return false;
+    }
     logrecord_t *record = (logrecord_t*)value;
     char content[128];
-    sprintf(content, "%u\t%lu\t%u"
-            , *(uint32_t*)key, record->bytes, record->count);
+    sprintf(content, "%s\t%lu\t%u\n", ip, record->bytes, record->count);
     size_t len = strlen(content);
     return len != fwrite(content, sizeof(char), len, (FILE *)user_data);
 }

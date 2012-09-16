@@ -46,6 +46,7 @@ bool identify_protocol_ip_port(const char *log
     if (inet_pton(AF_INET, dst_ip, addr) <= 0) {
         return false;
     }
+    *addr = ntohl(*addr);
 
     char *port_loc = strstr(blank_loc, port_name);
     if (port_loc == NULL || (port_loc+port_name_len-log) > len)
