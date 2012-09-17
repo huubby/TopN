@@ -30,7 +30,7 @@ struct ip_seg get_ip_seg_from_mask_str(char *str) {
     // here, set last char to '\0', in case of xxx.xxx.xxx.xxx?
 	int ret = inet_pton(AF_INET, ipstr, &(ip));
 	if (ret <= 0) {
-		log("ip地址格式错误:%s", ipstr);
+		log("Invalid IP format: %s", ipstr);
 		return tmp_ip_seg;
 	}
 	token = strtok_r(NULL, "/", &saveptr);
@@ -40,7 +40,7 @@ struct ip_seg get_ip_seg_from_mask_str(char *str) {
 		mask = atoi(token);
 	}
 	if ((mask > 32) || (mask < 0)) {
-		log("掩码格式错误:%s", token);
+		log("Invalid mask format: %s", token);
 		return tmp_ip_seg;
 	}
 	ip = ntohl(ip);
@@ -74,7 +74,7 @@ struct ip_seg get_ip_seg_from_ip_mask(uint32_t ip, int mask) {
 	}
 
 	if ((mask > 32) || (mask < 0)) {
-		log("mask长度错误(%d)", mask);
+		log("Invalid mask(%d)", mask);
 		return tmp_ip_seg;
 	}
 

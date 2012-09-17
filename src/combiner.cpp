@@ -1,11 +1,3 @@
-//============================================================================
-// Name        : ip_merge.cpp
-// Author      :
-// Version     :
-// Copyright   : Your copyright notice
-// Description : Hello World in C++, Ansi-style
-//============================================================================
-
 #include <iostream>
 #include <stdint.h>
 #include <stddef.h>
@@ -80,7 +72,7 @@ void calc(uint32_t start, uint32_t end) {
 int main(int argc, char **argv) {
 
 	if (argc < 2) {
-		cout << "usage: merge input_file1 input_file2 ..." << endl;
+		cout << "usage: combiner input_file1 input_file2 ..." << endl;
 		return -1;
 	}
 
@@ -92,13 +84,13 @@ int main(int argc, char **argv) {
 		int filenameLen = strlen(filename);
 
 		if (filenameLen >= PATH_MAX) {
-			log("%s -文件名称超过最大长度限制(%d)", filename, PATH_MAX);
+			log("%s - name too long(%d)", filename, PATH_MAX);
 			continue;
 		}
 
 		fp = fopen(filename, "r");
 		if (fp == NULL) {
-			log("打开文件失败(%s)", filename);
+			log("Open file(%s) failed", filename);
 			continue;
 		}
 
@@ -108,7 +100,7 @@ int main(int argc, char **argv) {
 			for (; *p != '\0' && !isspace(*p); p++) {
 			}
 			*p = '\0';
-			cout << buffer<<endl;
+			//cout << buffer<<endl;
 			struct ip_seg ip_seg = get_ip_seg_from_mask_str(buffer);
 			for (uint32_t ip = ip_seg.start; ip <= ip_seg.end; ip++) {
 				ip_set.insert(ip);
@@ -118,18 +110,17 @@ int main(int argc, char **argv) {
 		fclose(fp);
 	}
 	if(ip_set.size() == 0){
-		cout<<"未找到要处理的IP段"<<endl;
+		cout<<"No IP found in input files"<<endl;
 		return -1;
 	}
-	cout << "-----------------" << endl;
-	std::vector<uint32_t> ip_vector;
+	//cout << "-----------------" << endl;
 	std::set<uint32_t>::iterator it;
 	uint32_t pre_ip = *ip_set.begin();
 	uint32_t start_ip;
 	start_ip = *ip_set.begin();
 	for (it = ip_set.begin(); it != ip_set.end(); ++it) {
 		if (*it - pre_ip > 1) {
-//			cout << "找到连续IP： start_ip:" << start_ip << "end_ip:" << pre_ip << endl;
+//			cout << "Continuous IP segment found: start_ip:" << start_ip << "end_ip:" << pre_ip << endl;
 			calc(start_ip, pre_ip);
 			start_ip = *it;
 		}
