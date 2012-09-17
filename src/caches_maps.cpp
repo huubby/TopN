@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <arpa/inet.h>
 #include "log.h"
+#include "topn.h"
 #include "hash_table.h"
 #include "memcache.h"
 #include "ipmask.h"
@@ -18,6 +19,8 @@ static hash_table_t *tcp80_map = NULL;
 static hash_table_t *tcp443_map = NULL;
 static hash_table_t *tcp8080_map = NULL;
 static hash_table_t *regular_map = NULL;
+
+static topn_t *topn_ip = NULL;
 
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 
@@ -146,15 +149,52 @@ bool build_wb_list(const char *filename)
     return true;
 }
 
+int ip_compare(const void *key1, const void *key2, void *user_data)
+{
+    logrecord_t *record1 = (logrecord_t *)key1;
+    logrecord_t *record2 = (logrecord_t *)key2;
+    if (record1->bytes > record2->bytes)
+        return 1;
+    else if (record1->bytes < record2->bytes)
+        return -1;
+    else {
+        return uint32_compare_func(&record1->count, &record2->count, NULL);
+    }
+}
+
+bool sort_ip(void *key, void *value, void *user_data)
+{
+    topn_t *topn = (topn_t *)user_data;
+    topn_insert(topn, value, key); // reverse insertion
+    return true;
+}
+
+bool sort_list(port_type_t type)
+{
+    hash_table_t *table = get_map_by_type(type);
+    if (table == NULL) {
+        return false;
+    }
+    uint table_size = hash_table_size(table);
+
+    if (topn_ip != NULL) {
+        topn_free(topn_ip);
+    }
+    topn_ip = topn_new(table_size, ip_compare, table, NULL, NULL);
+    hash_table_foreach(table, sort_ip, topn_ip);
+    //topn_foreach(topn_ip, print, NULL);
+    return true;
+}
+
 bool dump_record(void *key, void *value, void *user_data)
 {
-    uint32_t addr = htonl(*(uint32_t*)key);
+    uint32_t addr = htonl(*(uint32_t*)value);
     char ip[16] = {0};
 
     if (!inet_ntop(AF_INET, &addr, ip, sizeof(ip))) {
         return false;
     }
-    logrecord_t *record = (logrecord_t*)value;
+    logrecord_t *record = (logrecord_t*)key;
     char content[128];
     sprintf(content, "%s\t%lu\t%u\n", ip, record->bytes, record->count);
     size_t len = strlen(content);
@@ -163,6 +203,11 @@ bool dump_record(void *key, void *value, void *user_data)
 
 bool dump_list(port_type_t type, const char *filename)
 {
+    if (!sort_list(type)) {
+        LOG(LOG_LEVEL_ERROR, "Sort list %s failed", filename);
+        return false;
+    }
+
     FILE *file = fopen(filename, "w");
     if (!file) {
         LOG(LOG_LEVEL_ERROR, "Open %s for writing failed", filename);
@@ -170,13 +215,7 @@ bool dump_list(port_type_t type, const char *filename)
     }
     assert(file != NULL);
 
-    hash_table_t *table = get_map_by_type(type);
-    if (table == NULL) {
-        fclose(file);
-        return false;
-    }
-
-    hash_table_foreach(table, dump_record, file);
+    topn_foreach(topn_ip, dump_record, file);
     fclose(file);
     return true;
 }

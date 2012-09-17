@@ -10,6 +10,7 @@ void init_caches(uint32_t count);
 bool
 record2map(uint32_t addr, const logrecord_t *record, port_type_t type);
 
+bool sort_list(port_type_t type);
 bool dump_list(port_type_t type, const char *filename);
 
 #endif // __CACHES_MAPS_H__

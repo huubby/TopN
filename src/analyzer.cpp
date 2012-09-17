@@ -45,6 +45,7 @@ const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 const uint32_t MAX_PATH_LEN = (PATH_MAX-4); //counting the backup suffix, "orig"
 bool check_files();
 bool process_logfile();
+bool sort();
 bool output();
 
 int main(int argc, char*argv[])
@@ -202,7 +203,7 @@ bool process_logfile()
         if (!parse_log(line, &addr, &record, &type) || ip_in_wb_list(addr))
             continue;    // Ignore this line, continue to next
 
-        bool valiable = false;
+        bool valiable = true;
         if (type == TCP_PORT_80
             || type == TCP_PORT_443
             || type == TCP_PORT_8080) {
@@ -219,6 +220,7 @@ bool process_logfile()
 
     return true;
 }
+
 
 bool output()
 {
