@@ -10,6 +10,7 @@
 #include "nat_log_parser.h"
 #include "clist_parser.h"
 #include "caches_maps.h"
+#include "touch.h"
 
 //-------------------- Command Line Arguments ----------------------
 static char *log_file = NULL;
@@ -51,6 +52,15 @@ int main(int argc, char*argv[])
     if (init_application(argc, argv, options, description) < 0) {
         exit(-1);
     }
+
+    if(g_default_log != NULL){
+        log_free(g_default_log);
+    }
+    g_default_log = log_new_stdout(LOG_LEVEL_WARNING);
+    if (g_default_log == NULL) {
+        exit(-1);
+    }
+
     if (!check_files()) {
         LOG(LOG_LEVEL_ERROR, "Invalid parameter(s)");
         exit(-1);
@@ -94,18 +104,10 @@ bool create_file(const char *name)
 bool file_exist_valid(const char *name, int mode)
 {
     assert(name!=NULL);
-    if (!access(name, mode)) {
-        if (errno == ENAMETOOLONG) {
-            LOG(LOG_LEVEL_ERROR, "The file %s name too long", name);
-        } else if (errno == EACCES) {
-            LOG(LOG_LEVEL_ERROR, "The file %s cann't be accessed", name);
-        } else if (errno == ENOTDIR) {
-            LOG(LOG_LEVEL_ERROR
-                    , "A component used as a directory in %s is not"
-                    " a directory"
-                    , name);
-        }
-
+    if (-1 == access(name, mode)) {
+        LOG(LOG_LEVEL_ERROR
+                , "%s does not exist or permission denied, %s"
+                , name, strerror(errno));
         return false;
     }
 
@@ -114,7 +116,6 @@ bool file_exist_valid(const char *name, int mode)
 
 bool check_file(const char *name, port_type_t type)
 {
-
     if (!name) {
         char **list = NULL;
         if (type == REGULAR_PORT) {
@@ -151,16 +152,18 @@ bool check_files()
         || !check_file(c80_list, TCP_PORT_80)
         || !check_file(c443_list, TCP_PORT_443)
         || !check_file(c8080_list, TCP_PORT_8080)) {
+        LOG(LOG_LEVEL_ERROR, "Checking c.list files failed");
         return false;
     }
 
-    if (!file_exist_valid(log_file, R_OK) == 0
-        || !file_exist_valid(w_list, R_OK) == 0
-        || !file_exist_valid(b_list, R_OK) == 0
-        || !file_exist_valid(c_list, R_OK) == 0
-        || !file_exist_valid(c80_list, R_OK) == 0
-        || !file_exist_valid(c443_list, R_OK) == 0
-        || !file_exist_valid(c8080_list, R_OK) == 0) {
+    if (!file_exist_valid(log_file, R_OK)
+        || !file_exist_valid(w_list, R_OK)
+        || !file_exist_valid(b_list, R_OK)
+        || !file_exist_valid(c_list, R_OK)
+        || !file_exist_valid(c80_list, R_OK)
+        || !file_exist_valid(c443_list, R_OK)
+        || !file_exist_valid(c8080_list, R_OK)) {
+        LOG(LOG_LEVEL_ERROR, "Validate files failed");
         return false;
     }
 
@@ -203,9 +206,7 @@ bool process_logfile()
         if (type == TCP_PORT_80
             || type == TCP_PORT_443
             || type == TCP_PORT_8080) {
-            // TODO Test if the addr could be reached
-            // ...
-            valiable = true;
+            valiable = is_addr_reachable(addr, type);
         }
 
         if (valiable)

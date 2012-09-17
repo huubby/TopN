@@ -177,5 +177,6 @@ bool dump_list(port_type_t type, const char *filename)
     }
 
     hash_table_foreach(table, dump_record, file);
+    fclose(file);
     return true;
 }
