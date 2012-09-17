@@ -30,6 +30,7 @@ bool is_addr_reachable(uint32_t ip_num, port_type_t type)
     uint16_t port = type_2_port(type);
     if (port == 0)
         return false;
+    ip_num = htonl(ip_num);
     char ip[16];
     if (!inet_ntop(AF_INET, &ip_num, ip, sizeof(ip))) {
         return false;
