@@ -25,9 +25,9 @@ CommandLineOptions_t options[] = {
     { "f", "The name of NAT log file waiting for processing"
         , "log file name", OPTION_REQUIRED, ARG_STR, &log_file },
     { "w", "The name of w.list file"
-        , "w.list name", OPTION_REQUIRED, ARG_STR, &w_list },
+        , "w.list name", OPTION_OPTIONAL, ARG_STR, &w_list },
     { "b", "The name of b.list file"
-        , "b.list name", OPTION_REQUIRED, ARG_STR, &b_list },
+        , "b.list name", OPTION_OPTIONAL, ARG_STR, &b_list },
     { "c", "The name of c.list file"
         , "c.list name", OPTION_OPTIONAL, ARG_STR, &c_list },
     { "h", "The name of c.list.80 file"
@@ -41,6 +41,15 @@ CommandLineOptions_t options[] = {
 static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
 
 //--------------------- Global Datas -------------------------------
+static char *default_w_list = "w.list";
+static char *default_b_list = "b.list";
+static char *default_c_list = "c.list";
+static char *default_c80_list = "c.list.80";
+static char *default_c443_list = "c.list.443";
+static char *default_c8080_list = "c.list.8080";
+static bool w_list_exist = true;
+static bool b_list_exist = true;
+
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 const uint32_t MAX_PATH_LEN = (PATH_MAX-4); //counting the backup suffix, "orig"
 bool check_files();
@@ -69,8 +78,8 @@ int main(int argc, char*argv[])
 
     init_caches(0);
 
-    if (!build_wb_list(w_list)
-        || !build_wb_list(b_list)
+    if ((w_list_exist && !build_wb_list(w_list))
+        || (b_list_exist && !build_wb_list(b_list))
         || !build_map_from_c_list(c_list, REGULAR_PORT)
         || !build_map_from_c_list(c80_list, TCP_PORT_80)
         || !build_map_from_c_list(c443_list, TCP_PORT_443)
@@ -106,64 +115,108 @@ bool file_exist_valid(const char *name, int mode)
 {
     assert(name!=NULL);
     if (-1 == access(name, mode)) {
-        LOG(LOG_LEVEL_ERROR
-                , "%s does not exist or permission denied, %s"
-                , name, strerror(errno));
+        //LOG(LOG_LEVEL_ERROR
+        //        , "%s does not exist or permission denied, %s"
+        //        , name, strerror(errno));
         return false;
     }
 
     return true;
 }
 
-bool check_file(const char *name, port_type_t type)
+typedef enum {
+    W_LIST = 1
+    , B_LIST
+    , C_LIST
+    , C_LIST_80
+    , C_LIST_443
+    , C_LIST_8080
+} file_type_t;
+
+bool type2name(file_type_t type, char **name)
 {
-    if (!name) {
-        char **list = NULL;
-        if (type == REGULAR_PORT) {
-            name = "c.list";
-            list = &c_list;
-        } else if (type == TCP_PORT_80) {
-            name = "c.list.80";
-            list = &c80_list;
-        } else if (type == TCP_PORT_443) {
-            name = "c.list.443";
-            list = &c443_list;
-        } else if (type == TCP_PORT_8080) {
-            name = "c.list.8080";
-            list = &c8080_list;
-        } else {
+    assert(name!=NULL);
+
+    switch (type)
+    {
+        case W_LIST:
+            *name = default_w_list;
+            break;
+        case B_LIST:
+            *name = default_b_list;
+            break;
+        case C_LIST:
+            *name = default_c_list;
+            break;
+        case C_LIST_80:
+            *name = default_c80_list;
+            break;
+        case C_LIST_443:
+            *name = default_c443_list;
+            break;
+        case C_LIST_8080:
+            *name = default_c8080_list;
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+bool check_file(file_type_t type, char **name)
+{
+    assert(name!=NULL);
+
+    if (*name) {
+        if (!file_exist_valid(*name, R_OK)){
+            LOG(LOG_LEVEL_ERROR
+                    , "%s, permission denied, %s"
+                    , *name, strerror(errno));
             return false;
         }
-
-        LOG(LOG_LEVEL_WARNING
-            , "%s is absent, will create it automatically", name);
-
-        if (!create_file(name)) {
-            LOG(LOG_LEVEL_ERROR, "Failed to create %s", name);
+    } else {
+        if (!type2name(type, name))
             return false;
+
+        if (!file_exist_valid(*name, F_OK)) {
+            if (type == W_LIST) {
+                w_list_exist = false;
+                LOG(LOG_LEVEL_WARNING
+                        , "%s is absent, no w.list will be used", *name);
+            } else if (type == B_LIST) {
+                b_list_exist = false;
+                LOG(LOG_LEVEL_WARNING
+                        , "%s is absent, no b.list will be used", *name);
+            } else {
+                LOG(LOG_LEVEL_WARNING
+                        , "%s is absent, will create it automatically", *name);
+                if (!create_file(*name)) {
+                    LOG(LOG_LEVEL_ERROR, "Failed to create %s", *name);
+                    return false;
+                }
+            }
+
         }
-        *list = (char*)name;
     }
     return true;
 }
 
 bool check_files()
 {
-    if (!check_file(c_list, REGULAR_PORT)
-        || !check_file(c80_list, TCP_PORT_80)
-        || !check_file(c443_list, TCP_PORT_443)
-        || !check_file(c8080_list, TCP_PORT_8080)) {
+    if (!check_file(C_LIST, &c_list)
+        || !check_file(C_LIST_80, &c80_list)
+        || !check_file(C_LIST_443, &c443_list)
+        || !check_file(C_LIST_8080, &c8080_list)) {
         LOG(LOG_LEVEL_ERROR, "Checking c.list files failed");
         return false;
     }
+    if (!check_file(W_LIST, &w_list) || !check_file(B_LIST, &b_list)) {
+        LOG(LOG_LEVEL_ERROR, "Checking w.list/b.list failed");
+        return false;
+    }
 
-    if (!file_exist_valid(log_file, R_OK)
-        || !file_exist_valid(w_list, R_OK)
-        || !file_exist_valid(b_list, R_OK)
-        || !file_exist_valid(c_list, R_OK)
-        || !file_exist_valid(c80_list, R_OK)
-        || !file_exist_valid(c443_list, R_OK)
-        || !file_exist_valid(c8080_list, R_OK)) {
+    if (!file_exist_valid(log_file, R_OK)) {
         LOG(LOG_LEVEL_ERROR, "Validate files failed");
         return false;
     }

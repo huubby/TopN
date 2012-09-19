@@ -50,46 +50,50 @@ bool is_addr_reachable(uint32_t ip_num, port_type_t type)
     }
 
     bool result = true;
-    arg = fcntl(soc, F_GETFL, NULL);
-    arg |= O_NONBLOCK;
-    if (-1 == fcntl(soc, F_SETFL, arg)) {
-        LOG(LOG_LEVEL_WARNING, "Set socket to non-block failed");
-        result = false;
-        goto end;
-    }
+    //arg = fcntl(soc, F_GETFL, NULL);
+    //arg |= O_NONBLOCK;
+    //if (-1 == fcntl(soc, F_SETFL, arg)) {
+    //    LOG(LOG_LEVEL_WARNING, "Set socket to non-block failed");
+    //    result = false;
+    //    goto end;
+    //}
 
+    bzero((char*)&addr, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = inet_addr(ip);
+    addr.sin_port = htons(8810);//htons(port);
+    addr.sin_addr.s_addr = inet_addr("129.196.197.170");//inet_addr(ip);
     errno = 0;
     res = connect(soc, (struct sockaddr*)&addr, sizeof(addr));
     if (res < 0) {
-        if (errno == EINPROGRESS) {
-            tv.tv_sec = 0;
-            tv.tv_usec = TIME_OUT;
-            FD_ZERO(&myset);
-            FD_SET(soc, &myset);
-            if (select(1, NULL, &myset, NULL, &tv) > 0) {
-                lon = sizeof(int);
-                getsockopt(soc, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon);
-                if (valopt) {
-                    LOG(LOG_LEVEL_WARNING
-                            , "Error in connect() %d - %s, IP(%s)\n"
-                            , valopt, strerror(valopt), ip);
-                    result = false;
-                    goto end;
-                }
-            } else {
-                LOG(LOG_LEVEL_WARNING, "Connecting timeout, %s, IP(%s)", strerror(errno), ip);
-                result = false;
-                goto end;
-            }
-        } else {
-            LOG(LOG_LEVEL_WARNING
-                    , "Error connecting, %s, IP(%s)\n", strerror(errno), ip);
-            result = false;
-            goto end;
-        }
+        LOG(LOG_LEVEL_ERROR, "connect() failed, %s", strerror(errno));
+        //if (errno == EINPROGRESS) {
+        //    tv.tv_sec = 0;
+        //    tv.tv_usec = TIME_OUT;
+        //    FD_ZERO(&myset);
+        //    FD_SET(soc, &myset);
+        //    if (select(1, NULL, &myset, NULL, &tv) > 0) {
+        //        lon = sizeof(int);
+        //        getsockopt(soc, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon);
+        //        if (valopt) {
+        //            LOG(LOG_LEVEL_WARNING
+        //                    , "Error in connect() %d - %s, IP(%s)\n"
+        //                    , valopt, strerror(valopt), ip);
+        //            result = false;
+        //            goto end;
+        //        }
+        //    } else {
+        //        LOG(LOG_LEVEL_WARNING, "Connecting timeout, %s, IP(%s)", strerror(errno), ip);
+        //        result = false;
+        //        goto end;
+        //    }
+        //} else {
+        //    LOG(LOG_LEVEL_WARNING
+        //            , "Error connecting, %s, IP(%s)\n", strerror(errno), ip);
+        //    result = false;
+        //    goto end;
+        //}
+    } else {
+        LOG(LOG_LEVEL_TEST, "connect() succeed");
     }
 
 end:
