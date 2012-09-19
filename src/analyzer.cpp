@@ -21,6 +21,8 @@ static char *c_list = NULL;
 static char *c80_list = NULL;
 static char *c443_list = NULL;
 static char *c8080_list = NULL;
+
+static char *timeout = NULL;
 CommandLineOptions_t options[] = {
     { "f", "The name of NAT log file waiting for processing"
         , "log file name", OPTION_REQUIRED, ARG_STR, &log_file },
@@ -36,6 +38,8 @@ CommandLineOptions_t options[] = {
         , "c.list.443 name", OPTION_OPTIONAL, ARG_STR, &c443_list },
     { "t", "The name of c.list.8080 file"
         , "c.list.8080 name", OPTION_OPTIONAL, ARG_STR, &c8080_list },
+    { "o", "The timeout for reachable detection, in millisecond, default 300"
+        , "timeout value", OPTION_OPTIONAL, ARG_NUM, &timeout},
     {NULL, NULL, NULL, 0, 0, NULL}
 };
 static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
@@ -47,6 +51,7 @@ static char *default_c_list = "c.list";
 static char *default_c80_list = "c.list.80";
 static char *default_c443_list = "c.list.443";
 static char *default_c8080_list = "c.list.8080";
+static uint32_t timeout_value = 300;
 static bool w_list_exist = true;
 static bool b_list_exist = true;
 
@@ -69,6 +74,10 @@ int main(int argc, char*argv[])
     g_default_log = log_new_stdout(LOG_LEVEL_WARNING);
     if (g_default_log == NULL) {
         exit(-1);
+    }
+
+    if (timeout != NULL) {
+        timeout_value = strtol(timeout, NULL, 10);
     }
 
     if (!check_files()) {
@@ -217,7 +226,8 @@ bool check_files()
     }
 
     if (!file_exist_valid(log_file, R_OK)) {
-        LOG(LOG_LEVEL_ERROR, "Validate files failed");
+        LOG(LOG_LEVEL_ERROR
+                , "%s doesn't exist, or permission denied", log_file);
         return false;
     }
 
@@ -260,7 +270,7 @@ bool process_logfile()
         if (type == TCP_PORT_80
             || type == TCP_PORT_443
             || type == TCP_PORT_8080) {
-            valiable = is_addr_reachable(addr, type);
+            valiable = is_addr_reachable(addr, type, timeout_value);
         }
 
         if (valiable)
