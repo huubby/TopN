@@ -74,8 +74,8 @@ is_addr_reachable(uint32_t ip_num, port_type_t type, uint32_t timeout_in_ms)
                 getsockopt(soc, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon);
                 if (valopt) {
                     LOG(LOG_LEVEL_WARNING
-                            , "Error in connect() %d - %s, IP(%s)\n"
-                            , valopt, strerror(valopt), ip);
+                            , "Error in connect() %d - %s, (%s:%d)"
+                            , valopt, strerror(valopt), ip, port);
                     result = false;
                     goto end;
                 }
@@ -88,7 +88,8 @@ is_addr_reachable(uint32_t ip_num, port_type_t type, uint32_t timeout_in_ms)
             }
         } else {
             LOG(LOG_LEVEL_WARNING
-                    , "Error connecting, %s, IP(%s)\n", strerror(errno), ip);
+                    , "Error connecting, %s, (%s:%d)"
+                    , strerror(errno), ip, port);
             result = false;
             goto end;
         }
