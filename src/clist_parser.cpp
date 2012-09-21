@@ -9,6 +9,36 @@
 #include "caches_maps.h"
 #include "clist_parser.h"
 
+const uint64_t INVALID_BYTES =  (uint64_t)-1;
+const uint32_t BYTES_PER_KB = 1024;
+const uint32_t BYTES_PER_MB = 1024*BYTES_PER_KB;
+uint64_t convert_bytes(char *traffic_str)
+{
+    if (!traffic_str)
+        return INVALID_BYTES;
+    size_t len = strlen(traffic_str);
+    if (len <= 0)
+        return INVALID_BYTES;
+
+    uint64_t bytes = 0;
+    float bytes_float_num = 0;
+    bool isMB = false, isKB = false;
+    isMB = (traffic_str[len-1]=='M' || traffic_str[len-1]=='m');
+    isKB = (traffic_str[len-1]=='K' || traffic_str[len-1]=='k');
+    errno = 0;
+    if (isMB || isKB) {
+        traffic_str[len-1] = '\0';
+        bytes_float_num = strtof(traffic_str, NULL);
+
+        bytes = (uint64_t)(isMB ?
+            (bytes_float_num*BYTES_PER_MB) : (bytes_float_num*BYTES_PER_KB));
+    } else {
+        bytes = strtoull(traffic_str, NULL, 10);
+    }
+
+    return errno==0 ? bytes : INVALID_BYTES;
+}
+
 bool
 parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
 {
@@ -37,9 +67,7 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
     char bytes[32];
     strncpy(bytes, traffic_loc, tab_loc-traffic_loc);
     bytes[tab_loc-traffic_loc] = '\0';
-    errno = 0;
-    record->bytes = strtoull(bytes, NULL, 10);
-    if (errno != 0)
+    if ((record->bytes = convert_bytes(bytes)) == INVALID_BYTES)
         return false;  // Invalid number
 
     while (*(++tab_loc) == '\t');
