@@ -191,8 +191,8 @@ format(const char *ip, uint64_t bytes, uint32_t count, char *content)
 {
     assert(content);
 
-    const uint32_t BYTES_PER_MB = 1000000;
-    const uint32_t BYTES_PER_KB = 1000;
+    const uint32_t BYTES_PER_KB = 1024;
+    const uint32_t BYTES_PER_MB = 1024*BYTES_PER_KB;
     bool isMB = false;
     bool isKB = false;
     float bytes_after_convert = 0;
