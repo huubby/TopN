@@ -38,11 +38,12 @@ CommandLineOptions_t options[] = {
         , "c.list.443 name", OPTION_OPTIONAL, ARG_STR, &c443_list },
     { "t", "The name of c.list.8080 file"
         , "c.list.8080 name", OPTION_OPTIONAL, ARG_STR, &c8080_list },
-    { "o", "The timeout for reachable detection, in millisecond, default 300"
+    { "o", "The timeout for reachable detection, in millisecond, default 300."
+        " Set 0 to skip detection"
         , "timeout value", OPTION_OPTIONAL, ARG_NUM, &timeout},
     {NULL, NULL, NULL, 0, 0, NULL}
 };
-static char description[] = {"Linux NAT log file analyzer\nVersion 1.0\n"};
+static char description[] = {"Linux NAT log file analyzer\nVersion 1.2\n"};
 
 //--------------------- Global Datas -------------------------------
 static char *default_w_list = "w.list";
@@ -267,9 +268,10 @@ bool process_logfile()
             continue;    // Ignore this line, continue to next
 
         bool valiable = true;
-        if (type == TCP_PORT_80
-            || type == TCP_PORT_443
-            || type == TCP_PORT_8080) {
+        if ((timeout_value != 0)
+            && (type == TCP_PORT_80
+                || type == TCP_PORT_443
+                || type == TCP_PORT_8080)) {
             valiable = is_addr_reachable(addr, type, timeout_value);
         }
 
