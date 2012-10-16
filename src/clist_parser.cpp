@@ -46,7 +46,7 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
     // 1. parse record from middle result line
     // 2. record saved to map
     const char *tab = "\t";
-    char *tab_loc = strstr(line, tab);
+    const char *tab_loc = strstr(line, tab);
     if (tab_loc == NULL || tab_loc-line > max_ip_len)
         return false;   // No tab, or ip len is incorrect
     char ip[max_ip_len];
@@ -60,7 +60,7 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
     while (*(++tab_loc) == '\t');
     if (tab_loc - line > len)
         return false;
-    char *traffic_loc = tab_loc;
+    const char *traffic_loc = tab_loc;
     tab_loc = strstr(traffic_loc, tab);
     if (tab_loc == NULL || tab_loc-line > len)
         return false;   // No tab

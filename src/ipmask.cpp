@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <arpa/inet.h>
+#include <string.h>
 #include "ipmask.h"
 
 using namespace std;

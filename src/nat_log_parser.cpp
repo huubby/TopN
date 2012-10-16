@@ -25,14 +25,14 @@ bool identify_protocol_ip_port(const char *log
     *end = (char *)log;
 
     int len = (int)strlen(log);
-    char *blank_loc;
-    char *protocol_loc;
+    const char *blank_loc;
+    const char *protocol_loc;
     if (!(protocol_loc = strstr(log, tcp_protocol))
         && !(protocol_loc = strstr(log, udp_protocol))) {
         return false;
     }
 
-    char *dst_ip_loc = strstr(protocol_loc, dst_ip_name);
+    const char *dst_ip_loc = strstr(protocol_loc, dst_ip_name);
     if (dst_ip_loc == NULL || (dst_ip_loc+dst_ip_name_len-log) > len)
         return false;
 
@@ -48,7 +48,7 @@ bool identify_protocol_ip_port(const char *log
     }
     *addr = ntohl(*addr);
 
-    char *port_loc = strstr(blank_loc, port_name);
+    const char *port_loc = strstr(blank_loc, port_name);
     if (port_loc == NULL || (port_loc+port_name_len-log) > len)
         return false;
 
@@ -70,7 +70,7 @@ bool identify_protocol_ip_port(const char *log
         *type = REGULAR_PORT;
     }
 
-    *end = blank_loc;
+    *end = (char*)blank_loc;
 
     return true;
 }
