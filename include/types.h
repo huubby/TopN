@@ -22,7 +22,7 @@ typedef struct {
 #pragma pack()
 
 typedef enum {
-    REGULAR_PORT = 0
+    ALL_PORT = 0
     , TCP_PORT_80
     , TCP_PORT_443
     , TCP_PORT_8080

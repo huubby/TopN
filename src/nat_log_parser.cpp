@@ -67,7 +67,7 @@ bool identify_protocol_ip_port(const char *log
     } else if (!strncmp(port, port_8080, port8080_len)) {
         *type = TCP_PORT_8080;
     } else {
-        *type = REGULAR_PORT;
+        *type = ALL_PORT;
     }
 
     *end = (char*)blank_loc;

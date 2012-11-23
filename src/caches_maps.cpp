@@ -27,7 +27,7 @@ const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 hash_table_t* get_map_by_type(port_type_t type)
 {
     switch (type) {
-        case REGULAR_PORT:
+        case ALL_PORT:
             return regular_map;
         case TCP_PORT_80:
             return tcp80_map;

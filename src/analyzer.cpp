@@ -90,7 +90,7 @@ int main(int argc, char*argv[])
 
     if ((w_list_exist && !build_wb_list(w_list))
         || (b_list_exist && !build_wb_list(b_list))
-        || !build_map_from_c_list(c_list, REGULAR_PORT)
+        || !build_map_from_c_list(c_list, ALL_PORT)
         || !build_map_from_c_list(c80_list, TCP_PORT_80)
         || !build_map_from_c_list(c443_list, TCP_PORT_443)
         || !build_map_from_c_list(c8080_list, TCP_PORT_8080)) {
@@ -275,8 +275,12 @@ bool process_logfile()
             valiable = is_addr_reachable(addr, type, timeout_value);
         }
 
-        if (valiable)
+        if (valiable) {
             record2map(addr, &record, type);
+            // All records should be put into common maps.
+            if (type != ALL_PORT)
+                record2map(addr, &record, ALL_PORT);
+        }
     }
 
     if (line)
@@ -309,7 +313,7 @@ bool output()
     if ((success = dump_list(TCP_PORT_80, c80_list)
                     && dump_list(TCP_PORT_443, c443_list)
                     && dump_list(TCP_PORT_8080, c8080_list)
-                    && dump_list(REGULAR_PORT, c_list))
+                    && dump_list(ALL_PORT, c_list))
         ) {
         sprintf(name, "%s%s", c_list, suffix);
         remove(name);
