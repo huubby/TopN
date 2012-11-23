@@ -186,37 +186,6 @@ bool sort_list(port_type_t type)
     return true;
 }
 
-inline void
-format(const char *ip, uint64_t bytes, uint32_t count, char *content)
-{
-    assert(content);
-
-    const uint32_t BYTES_PER_KB = 1024;
-    const uint32_t BYTES_PER_MB = 1024*BYTES_PER_KB;
-    bool isMB = false;
-    bool isKB = false;
-    float bytes_after_convert = 0;
-    if (bytes > BYTES_PER_MB*10) { // Greater than 10MB
-        bytes_after_convert = (((float)bytes)/BYTES_PER_MB);
-        isMB = true;
-    } else if (bytes > BYTES_PER_KB*10) { // Greater than 1MB
-        bytes_after_convert = (((float)bytes)/BYTES_PER_KB);
-        isKB = true;
-    }
-
-    if (isMB) {
-        sprintf(content
-                , "%s\t%.3fM\t%u\n"
-                , ip, bytes_after_convert, count);
-    } else if (isKB) {
-        sprintf(content
-                , "%s\t%.3fK\t%u\n"
-                , ip, bytes_after_convert, count);
-    } else {
-        sprintf(content, "%s\t%lu\t%u\n", ip, bytes, count);
-    }
-}
-
 bool dump_record(void *key, void *value, void *user_data)
 {
     uint32_t addr = htonl(*(uint32_t*)value);
@@ -226,11 +195,17 @@ bool dump_record(void *key, void *value, void *user_data)
         return false;
     }
     logrecord_t *record = (logrecord_t*)key;
-    char content[128];
-    //sprintf(content, "%s\t%lu\t%u\n", ip, record->bytes, record->count);
-    format(ip, record->bytes, record->count, content);
-    size_t len = strlen(content);
-    return len != fwrite(content, sizeof(char), len, (FILE *)user_data);
+    const uint32_t BYTES_PER_MB = 1024*1024;
+    if (record->bytes >= BYTES_PER_MB) { // Greater than 1MB
+        char content[128];
+        sprintf(content
+                , "%s\t%llu\t%u\n"
+                , ip, record->bytes/BYTES_PER_MB, record->count);
+        size_t len = strlen(content);
+        return len != fwrite(content, sizeof(char), len, (FILE *)user_data);
+    }
+
+    return true;
 }
 
 bool dump_list(port_type_t type, const char *filename)
