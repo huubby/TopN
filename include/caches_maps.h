@@ -4,7 +4,9 @@
 #include "types.h"
 
 bool ip_in_wb_list(uint32_t ip);
+bool ip_in_a_list(uint32_t ip);
 bool build_wb_list(const char *filename);
+bool build_a_list(const char *filename);
 void init_caches(uint32_t count);
 
 bool

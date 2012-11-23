@@ -16,6 +16,7 @@
 static char *log_file = NULL;
 static char *w_list = NULL;
 static char *b_list = NULL;
+static char *a_list = NULL;
 
 static char *c_list = NULL;
 static char *c80_list = NULL;
@@ -26,6 +27,8 @@ static char *timeout = NULL;
 CommandLineOptions_t options[] = {
     { "f", "The name of NAT log file waiting for processing"
         , "log file name", OPTION_REQUIRED, ARG_STR, &log_file },
+    { "a", "The name of a.list file"
+        , "a.list name", OPTION_REQUIRED, ARG_STR, &a_list },
     { "w", "The name of w.list file"
         , "w.list name", OPTION_OPTIONAL, ARG_STR, &w_list },
     { "b", "The name of b.list file"
@@ -90,6 +93,7 @@ int main(int argc, char*argv[])
 
     if ((w_list_exist && !build_wb_list(w_list))
         || (b_list_exist && !build_wb_list(b_list))
+        || !build_a_list(a_list)
         || !build_map_from_c_list(c_list, ALL_PORT)
         || !build_map_from_c_list(c80_list, TCP_PORT_80)
         || !build_map_from_c_list(c443_list, TCP_PORT_443)
@@ -229,6 +233,11 @@ bool check_files()
     if (!file_exist_valid(log_file, R_OK)) {
         LOG(LOG_LEVEL_ERROR
                 , "%s doesn't exist, or permission denied", log_file);
+        return false;
+    }
+    if (!file_exist_valid(a_list, R_OK)) {
+        LOG(LOG_LEVEL_ERROR
+                , "%s doesn't exist, or permission denied", a_list);
         return false;
     }
 
