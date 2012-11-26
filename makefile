@@ -12,6 +12,11 @@ combinerd depend ::
 combiner depend ::
 	$(MAKE) -C src -f release.mk $@
 
+.PHONY: release
+
+release:
+	make analyzer combiner
+
 test::
 	$(MAKE) -C test $@
 

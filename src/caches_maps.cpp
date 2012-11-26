@@ -136,8 +136,8 @@ bool build_wb_list(const char *filename)
 
     while ((linelen = getline(&line, &len, file)) != -1) {
         line[linelen-1] = '\0';
-        if (!validate_wb(line, linelen))
-            continue;
+        //if (!validate_wb(line, linelen))
+        //    continue;
 
         ip_seg ipseg = get_ip_seg_from_mask_str(line);
         if (ipseg.end == 0)
@@ -162,8 +162,8 @@ int ipseg_compare(const void *a, const void *b, void *user_data)
 {
     assert(a != NULL);
     assert(b != NULL);
-    ip_seg *ipseg = (ip_seg*)a;
-    uint32_t ip = *(uint32_t*)b;
+    uint32_t ip = *(uint32_t*)a;
+    ip_seg *ipseg = (ip_seg*)b;
 
     if (ipseg->start <= ip && ip <= ipseg->end)
         return 0;
@@ -196,8 +196,8 @@ bool build_a_list(const char *filename)
     while ((linelen = getline(&line, &len, file)) != -1) {
         line[linelen-1] = '\0';
         // a.list has the same format with w.list and b.list
-        if (!validate_wb(line, linelen))
-            continue;
+        //if (!validate_wb(line, linelen))
+        //    continue;
 
         ip_seg ipseg = get_ip_seg_from_mask_str(line);
         if (ipseg.end == 0)

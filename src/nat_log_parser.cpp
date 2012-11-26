@@ -101,17 +101,17 @@ bool identify_protocol_ip_port(const char *log
 
     char *position = NULL;
     uint32_t src_ip;
-    if (identify_ip(protocol_loc, src_ip_name, &src_ip, &position))
+    if (!identify_ip(protocol_loc, src_ip_name, &src_ip, &position))
         return false;
-    port_type_t src_port;
-    if (identify_port(position, src_port_name, &src_port, &position))
+    uint32_t dst_ip;
+    if (!identify_ip(position, dst_ip_name, &dst_ip, &position))
         return false;
 
-    uint32_t dst_ip;
-    if (identify_ip(position, dst_ip_name, &dst_ip, &position))
+    port_type_t src_port;
+    if (!identify_port(position, src_port_name, &src_port, &position))
         return false;
     port_type_t dst_port;
-    if (identify_port(position, dst_port_name, &dst_port, &position))
+    if (!identify_port(position, dst_port_name, &dst_port, &position))
         return false;
 
     bool is_src_in_a_list = ip_in_a_list(src_ip);
