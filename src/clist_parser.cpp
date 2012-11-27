@@ -22,19 +22,8 @@ uint64_t convert_bytes(char *traffic_str)
 
     uint64_t bytes = 0;
     float bytes_float_num = 0;
-    bool isMB = false, isKB = false;
-    isMB = (traffic_str[len-1]=='M' || traffic_str[len-1]=='m');
-    isKB = (traffic_str[len-1]=='K' || traffic_str[len-1]=='k');
     errno = 0;
-    if (isMB || isKB) {
-        traffic_str[len-1] = '\0';
-        bytes_float_num = strtof(traffic_str, NULL);
-
-        bytes = (uint64_t)(isMB ?
-            (bytes_float_num*BYTES_PER_MB) : (bytes_float_num*BYTES_PER_KB));
-    } else {
-        bytes = strtoull(traffic_str, NULL, 10);
-    }
+    bytes = strtoull(traffic_str, NULL, 10);
 
     return errno==0 ? bytes : INVALID_BYTES;
 }
@@ -69,6 +58,8 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
     bytes[tab_loc-traffic_loc] = '\0';
     if ((record->bytes = convert_bytes(bytes)) == INVALID_BYTES)
         return false;  // Invalid number
+    // The c.list bytes is in MB
+    record->bytes *= BYTES_PER_MB;
 
     while (*(++tab_loc) == '\t');
     if (tab_loc - line > len)
