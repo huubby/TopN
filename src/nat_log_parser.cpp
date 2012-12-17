@@ -161,7 +161,7 @@ bool identify_bytes(const char *log, uint64_t *bytes)
             bytes_num = (char*)malloc(bytes_num_len);
         }
         strncpy(bytes_num, bytes_loc, cur_num_len);
-        bytes_num[cur_num_len+1] = '\0';
+        bytes_num[cur_num_len] = '\0';
 
         *bytes += strtoull(bytes_num, NULL, 10);
     }
