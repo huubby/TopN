@@ -126,6 +126,7 @@ bool identify_protocol_ip_port(const char *log
         *addr = src_ip;
         *type = src_port;
     }
+    *end = position;
 
     return true;
 }
