@@ -996,7 +996,7 @@ void seg_tree_insert(seg_tree_t *seg_tree, uint start, uint end)
     struct _tree_node *end_node = tree_find_a_node(seg_tree->tree, &key);
 
     tree_key* start_key = (tree_key* )start_node->key;
-    tree_key* end_key = (tree_key* )start_node->key;
+    tree_key* end_key = (tree_key* )end_node->key;
     if (start_key != end_key) {            //包含别人
         struct _tree_node *rm_start_node = start_node;
         struct _tree_node *rm_end_node = end_node;

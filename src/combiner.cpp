@@ -42,7 +42,7 @@ void calc_local(uint start, uint end)
 {
     if (start == end) {
         output(start, end);
-        return ;
+        return;
     }
     uint32_t start_ip = start;
     uint32_t end_ip = end;
@@ -84,7 +84,7 @@ bool calc(uint start, uint end, void* user_data)
 //    cout << inet_ntoa(*(struct in_addr*) &start);
 //    cout<< "/" << inet_ntoa(*(struct in_addr*) &end)<< "\t"
 //            << start << "\t" << end << endl;
-    if (g_start == 0) {
+    if (g_end == 0) {
         g_start = start;
         g_end = end;
     } else {
@@ -150,7 +150,9 @@ int main(int argc, char **argv)
     }
 
     seg_tree_foreach(seg_tree, calc, NULL);
-    calc_local(g_start, g_end);
+    if (g_end != 0) {
+        calc_local(g_start, g_end);
+    }
 
     return 0;
 }
