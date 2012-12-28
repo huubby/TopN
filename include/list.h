@@ -1,5 +1,5 @@
-#ifndef CLIB_LIST_H_
-#define CLIB_LIST_H_
+#ifndef  _LIST_H_
+#define  _LIST_H_
 
 #include "types.h"
 
@@ -218,4 +218,4 @@ extern void list_destroy_func(void* data);
 }
 #endif 
 
-#endif /* CLIB_LIST_H_ */
+#endif /*  _LIST_H_ */

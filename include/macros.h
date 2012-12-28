@@ -4,8 +4,8 @@
  *Notice:
  **/
 
-#ifndef CLIB_MACROS_H_
-#define CLIB_MACROS_H_
+#ifndef  _MACROS_H_
+#define  _MACROS_H_
 
 #include <stdlib.h>
 
@@ -35,4 +35,4 @@ extern "C" {
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 #define ABS(a)     (((a) < 0) ? -(a) : (a))
 
-#endif /* CLIB_MACROS_H_ */
+#endif /*  _MACROS_H_ */

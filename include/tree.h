@@ -2,8 +2,8 @@
  *Description:      平衡二叉树
  *
  **/
-#ifndef CLIB_TREE_H_
-#define CLIB_TREE_H_
+#ifndef  _TREE_H_
+#define  _TREE_H_
 
 #include "types.h"
 
@@ -147,4 +147,4 @@ extern void tree_destroy_func(void* data);
 }
 #endif
 
-#endif /* CLIB_TREE_H_ */
+#endif /*  _TREE_H_ */

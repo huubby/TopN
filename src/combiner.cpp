@@ -38,15 +38,11 @@ void output(uint32_t start, uint32_t end)
 //			<< ntohl(ip_seg.start) << "\t" << ntohl(ip_seg.end) << endl;
 }
 
-bool calc(uint start, uint end, void* user_data)
+void calc_local(uint start, uint end)
 {
-//    cout << inet_ntoa(*(struct in_addr*) &start);
-//    cout<< "/" << inet_ntoa(*(struct in_addr*) &end)<< "\t"
-//            << start << "\t" << end << endl;
-
     if (start == end) {
         output(start, end);
-        return false;
+        return ;
     }
     uint32_t start_ip = start;
     uint32_t end_ip = end;
@@ -64,7 +60,8 @@ bool calc(uint start, uint end, void* user_data)
         //取重叠部分
         uint64_t overlapping =
                 (end_ip - start_ip) > (ip_seg.end - start_ip) ?
-                        (ip_seg.end - start_ip) : (end_ip - start_ip );
+                                                                (ip_seg.end - start_ip) :
+                                                                (end_ip - start_ip);
         if (overlapping * 100 / (ip_seg.end - ip_seg.start) < MERGE_RATE) {
             output(pre_ip_seg.start, pre_ip_seg.end);
             start_ip = pre_ip_seg.end + 1;
@@ -78,10 +75,29 @@ bool calc(uint start, uint end, void* user_data)
         }
         pre_ip_seg = ip_seg;
     }
-
-    return false;
 }
 
+uint g_start = 0;
+uint g_end = 0;
+bool calc(uint start, uint end, void* user_data)
+{
+//    cout << inet_ntoa(*(struct in_addr*) &start);
+//    cout<< "/" << inet_ntoa(*(struct in_addr*) &end)<< "\t"
+//            << start << "\t" << end << endl;
+    if (g_start == 0) {
+        g_start = start;
+        g_end = end;
+    } else {
+        if (start == g_end + 1) {
+            g_end = end;
+        } else {
+            calc_local(g_start, g_end);
+            g_start = start;
+            g_end = end;
+        }
+    }
+    return false;
+}
 
 int main(int argc, char **argv)
 {
@@ -134,7 +150,7 @@ int main(int argc, char **argv)
     }
 
     seg_tree_foreach(seg_tree, calc, NULL);
-
+    calc_local(g_start, g_end);
 
     return 0;
 }

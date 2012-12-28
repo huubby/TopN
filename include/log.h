@@ -6,8 +6,8 @@
  *                  这里的函数都是多线程安全的
  **/
 
-#ifndef CLIB_LOG_H_
-#define CLIB_LOG_H_
+#ifndef  _LOG_H_
+#define  _LOG_H_
 
 #include "types.h"
 
@@ -86,4 +86,4 @@ void log_errno(log_t* log, const char* source_file, int line,
 #define LOG_ERRNO(level, fmt, a...) log_errno(g_default_log, __FILE__, __LINE__, level, fmt, ##a)
 
 
-#endif /* CLIB_LOG_H_ */
+#endif /*  _LOG_H_ */

@@ -1,5 +1,5 @@
-#ifndef CLIB_RANGE_TREE_H
-#define CLIB_RANGE_TREE_H
+#ifndef  _RANGE_TREE_H
+#define  _RANGE_TREE_H
 
 #include "types.h"
 
@@ -36,14 +36,6 @@ extern seg_tree_t* seg_tree_new(destroy_func data_destroy_func);
  *@return
  */
 void seg_tree_insert(seg_tree_t *seg_tree, uint start, uint end);
-
-/*
- *@brief        根据key查找对应的data
- *@param in     tree            区间树
- *@param in     key             待查找的key
- *@return       如果key落在树中的某个区间，返回true, 否则返回false
- */
-extern bool seg_tree_contains(seg_tree_t *tree, const uint key);
 
 /*
  *@brief        释放区间树

@@ -151,7 +151,7 @@ void tree_free(tree_t *tree)
 
 static struct _tree_node* tree_node_new(tree_t *tree, void *key, void * value)
 {
-    struct _tree_node *node = (struct _tree_node *)mem_cache_alloc(tree->mem_cache);
+    struct _tree_node *node = (struct _tree_node *) mem_cache_alloc(tree->mem_cache);
 
     node->balance = 0;
     node->left = NULL;
@@ -686,6 +686,21 @@ static bool tree_remove_internal(tree_t *tree, const void *key, bool steal,
             value);
 }
 
+static void tree_remove_node(tree_t *tree, struct _tree_node *start_node, struct _tree_node *end_node)
+{
+    struct _tree_node *node = start_node;
+    struct _tree_node *next_node;
+    while (node) {
+        next_node = tree_node_next(node);
+        tree_remove(tree, node->key);
+        node = next_node;
+        if (node == end_node) {
+            tree_remove(tree, node->key);
+            break;
+        }
+    }
+}
+
 bool tree_remove(tree_t *tree, const void *key)
 {
     bool removed;
@@ -707,6 +722,34 @@ bool tree_steal(tree_t *tree, const void *lookup_key, void **orikey,
     stealed = tree_remove_internal(tree, lookup_key, true, orikey, value);
 
     return stealed;
+}
+
+struct _tree_node * tree_find_a_node(tree_t *tree, const void *key)
+{
+    struct _tree_node *node;
+    int cmp;
+
+    node = tree->root;
+    if (!node)
+        return NULL;
+
+    while (1) {
+        cmp = tree->key_compare(key, node->key, tree->user_data);
+        if (cmp == 0)
+            return node;
+        else if (cmp < 0) {
+            if (!node->left_child)
+                return node;
+
+            node = node->left;
+        } else {
+            if (!node->right_child)
+                return node;
+
+            node = node->right;
+        }
+    }
+    return node;
 }
 
 static struct _tree_node * tree_find_node(tree_t *tree, const void *key)
@@ -766,16 +809,15 @@ void *tree_lookup(tree_t *tree, const void *key)
     return node ? node->value : NULL;
 }
 
-void tree_foreach(tree_t *tree, traverse_pair_func func, void *user_data)
+void tree_foreach_internal(tree_t *tree, struct _tree_node *node, traverse_pair_func func, void *user_data)
 {
-    struct _tree_node *node;
-
     RETURN_IF_FAIL(tree != NULL);
 
     if (!tree->root)
         return;
-
-    node = tree_first_node(tree);
+    if (node == NULL) {
+        node = tree_first_node(tree);
+    }
 
     while (node) {
         if ((*func)(node->key, node->value, user_data))
@@ -783,6 +825,13 @@ void tree_foreach(tree_t *tree, traverse_pair_func func, void *user_data)
 
         node = tree_node_next(node);
     }
+}
+
+void tree_foreach(tree_t *tree, traverse_pair_func func, void *user_data)
+{
+    RETURN_IF_FAIL(tree != NULL);
+
+    tree_foreach_internal(tree, NULL, func, user_data);
 }
 
 void tree_reverse_foreach(tree_t *tree, traverse_pair_func func,
@@ -866,3 +915,139 @@ void * tree_remove_last_node(tree_t *tree)
 
     return temp_node->key;
 }
+
+//*******************************************************************************************************
+//seg_tree.c
+
+#include "seg_tree.h"
+
+#define DEFAULT_SEG_TREE_NODE_COUNT 4096         //默认节点个数
+typedef struct tree_key {
+    uint start;
+    uint end;
+} tree_key_t;
+
+struct _seg_tree {
+    tree_t *tree;
+    seg_traverse_func traverse_func; //遍历的时候用到
+    void *user_data;            //遍历的时候用到
+};
+
+static int key_equal(const void* a, const void* b, void *user_data)
+{
+    tree_key_t* v1 = (tree_key_t*) a;
+    tree_key_t* v2 = (tree_key_t*) b;
+
+    //v1包含v2
+    if (v1->start <= v2->start && v1->end >= v2->end) {
+        return 0;
+    }
+    //v2包含v1
+    else if (v2->start <= v1->start && v2->end >= v1->end) {
+        return 0;
+    }
+    //v2 > v1
+    else if (v2->start > v1->end) {
+        return -1;
+    }
+    //v1 > v2
+    else if (v1->start > v2->end) {
+        return 1;
+    }
+
+    //默认小于
+    return -1;
+}
+
+
+
+seg_tree_t* seg_tree_new(destroy_func data_destroy_func)
+{
+    struct _seg_tree *seg_tree = (struct _seg_tree *) mem_alloc( sizeof(struct _seg_tree));
+
+    seg_tree->tree = tree_new_full(DEFAULT_SEG_TREE_NODE_COUNT, key_equal, NULL,
+            default_destroy_func, NULL);
+
+    return seg_tree;
+}
+
+void seg_tree_insert(seg_tree_t *seg_tree, uint start, uint end)
+{
+    if (start > end) {
+        LOG(LOG_LEVEL_WARNING, "end must larger than start");
+        return;
+    }
+
+    //空树
+    if (tree_nnodes(seg_tree->tree) == 0) {
+        tree_key_t *temp_key = (tree_key_t *) mem_alloc(sizeof(tree_key_t));
+        temp_key->start = start;
+        temp_key->end = end;
+        tree_insert(seg_tree->tree, temp_key, NULL);
+        return;
+    }
+
+    tree_key key;
+    key.start = start;
+    key.end = start;
+    struct _tree_node *start_node = tree_find_a_node(seg_tree->tree, &key);
+    key.start = end;
+    key.end = end;
+    struct _tree_node *end_node = tree_find_a_node(seg_tree->tree, &key);
+
+    tree_key* start_key = (tree_key* )start_node->key;
+    tree_key* end_key = (tree_key* )start_node->key;
+    if (start_key != end_key) {            //包含别人
+        struct _tree_node *rm_start_node = start_node;
+        struct _tree_node *rm_end_node = end_node;
+        if (start_key->end < start) {
+            rm_start_node = tree_node_next(rm_start_node);
+        }
+        if (end_key->start > end) {
+            rm_end_node = tree_node_previous(rm_start_node);
+        }
+        tree_remove_node(seg_tree->tree, rm_start_node, rm_end_node);
+    } else {            //被别人包含或者是新的
+        if (start_key->start <= start && start_key->end >= end) {            //被包含
+            //忽略
+            return;
+        }
+    }
+
+    tree_key_t *temp_key = (tree_key_t *) mem_alloc(sizeof(tree_key_t));
+    temp_key->start = start;
+    temp_key->end = end;
+    tree_insert(seg_tree->tree, temp_key, NULL);
+    return;
+}
+
+
+void seg_tree_free(seg_tree_t *seg_tree)
+{
+    tree_free(seg_tree->tree);
+
+    mem_free(seg_tree);
+}
+
+static bool local_traverse_func(void *key, void* value, void* user_data)
+{
+    seg_tree_t *seg_tree = (seg_tree_t *) user_data;
+    tree_key_t *tree_key = (tree_key_t *) key;
+
+    return seg_tree->traverse_func(tree_key->start, tree_key->end,
+            seg_tree->user_data);
+}
+
+void seg_tree_foreach(seg_tree_t *seg_tree, seg_traverse_func func,
+        void* user_data)
+{
+    seg_tree->user_data = user_data;
+    seg_tree->traverse_func = func;
+    tree_foreach(seg_tree->tree, local_traverse_func, seg_tree);
+}
+
+uint seg_tree_nnodes(seg_tree_t *seg_tree)
+{
+    return tree_nnodes(seg_tree->tree);
+}
+

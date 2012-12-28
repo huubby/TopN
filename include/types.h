@@ -1,14 +1,6 @@
-/**
- *Author:           wuyangchun
- *Date:             2012-06-01
- *Description:
- *
- *Notice:
- **/
 
-
-#ifndef CLIB_TYPES_H_
-#define CLIB_TYPES_H_
+#ifndef  _TYPES_H_
+#define  _TYPES_H_
 
 #include "macros.h"
 #include <stdint.h>
@@ -104,4 +96,4 @@ extern int ip_compare_func(const void *a, const void *b, void *user_data);
 }
 #endif
 
-#endif /* CLIB_TYPES_H_ */
+#endif /*  _TYPES_H_ */

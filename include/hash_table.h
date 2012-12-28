@@ -4,8 +4,8 @@
  *
  **/
 
-#ifndef CLIB_HASH_H_
-#define CLIB_HASH_H_
+#ifndef  _HASH_H_
+#define  _HASH_H_
 
 #include "types.h"
 
@@ -219,4 +219,4 @@ extern void hash_table_destroy_func(void* data);
 #ifdef __cplusplus
 }
 #endif
-#endif /* CLIB_HASH_H_ */
+#endif /*  _HASH_H_ */
