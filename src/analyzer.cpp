@@ -48,17 +48,19 @@ CommandLineOptions_t options[] = {
 static char description[] = {"Linux NAT log file analyzer\nVersion 1.2\n"};
 
 //--------------------- Global Datas -------------------------------
-static char *default_w_list = "w.list";
-static char *default_b_list = "b.list";
-static char *default_c_list = "c.list";
-static char *default_c80_list = "c.list.80";
-static char *default_c443_list = "c.list.443";
-static char *default_c8080_list = "c.list.8080";
+static char *default_w_list = (char *)"w.list";
+static char *default_b_list = (char *)"b.list";
+static char *default_c_list = (char *)"c.list";
+static char *default_c80_list = (char *)"c.list.80";
+static char *default_c443_list = (char *)"c.list.443";
+static char *default_c8080_list = (char *)"c.list.8080";
 static uint32_t timeout_value = 0;
 static bool w_list_exist = true;
 static bool b_list_exist = true;
 
+#ifndef PATH_MAX
 #define PATH_MAX 260
+#endif
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 const uint32_t MAX_PATH_LEN = (PATH_MAX-4); //counting the backup suffix, "orig"
 bool check_files();

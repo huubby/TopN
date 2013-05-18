@@ -15,6 +15,10 @@ using namespace std;
 
 #define MERGE_RATE 100u
 
+#ifndef PATH_MAX
+#define PATH_MAX 260
+#endif
+
 void output(uint32_t start, uint32_t end)
 {
     int net_order_ip;
