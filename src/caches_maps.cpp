@@ -55,9 +55,8 @@ void init_caches(uint32_t count)
     assert(key_cache == NULL);
     assert(value_cache == NULL);
 
-// TODO Create cache 4 times as MAX_LINE_COUNT, not enough/overflow aware
-    key_cache = mem_cache_create(sizeof(uint32_t), 4*MAX_LOG_LINE);
-    value_cache = mem_cache_create(sizeof(logrecord_t), 4*MAX_LOG_LINE);
+    key_cache = mem_cache_create(sizeof(uint32_t), count);
+    value_cache = mem_cache_create(sizeof(logrecord_t), count);
     ipseg_cache = mem_cache_create(sizeof(ip_seg), MAX_A_LIST_LINES);
 
     assert(wb_list_map == NULL);

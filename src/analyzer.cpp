@@ -89,7 +89,8 @@ int main(int argc, char*argv[])
         exit(-1);
     }
 
-    init_caches(0);
+    const uint32_t DEFAULT_RECORD_NUM = 2000000; // 2 million
+    init_caches(DEFAULT_RECORD_NUM);
 
     if ((w_list_exist && !build_wb_list(w_list))
         || (b_list_exist && !build_wb_list(b_list))
