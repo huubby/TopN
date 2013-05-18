@@ -54,7 +54,7 @@ static char *default_c_list = "c.list";
 static char *default_c80_list = "c.list.80";
 static char *default_c443_list = "c.list.443";
 static char *default_c8080_list = "c.list.8080";
-static uint32_t timeout_value = 300;
+static uint32_t timeout_value = 0;
 static bool w_list_exist = true;
 static bool b_list_exist = true;
 
