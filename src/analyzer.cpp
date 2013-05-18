@@ -4,7 +4,6 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/limits.h>
 #include "log.h"
 #include "cmdparse.h"
 #include "nat_log_parser.h"
@@ -59,6 +58,7 @@ static uint32_t timeout_value = 300;
 static bool w_list_exist = true;
 static bool b_list_exist = true;
 
+#define PATH_MAX 260
 const uint32_t MAX_LINE_COUNT = MAX_LOG_LINE;
 const uint32_t MAX_PATH_LEN = (PATH_MAX-4); //counting the backup suffix, "orig"
 bool check_files();

@@ -14,7 +14,7 @@ TARGETS=analyzerd combinerd
 endif
 WARNING_OPTIONS=-Wall -Wpointer-arith
 COMPILE_OPTIONS+=-ansi -DMAX_LOG_LINE=5000000 -DLINUX $(WARNING_OPTIONS)
-LINK_OPTIONS=-Wl,-rpath=.
+LINK_OPTIONS=-Wl
 INCLUDES=-I../include
 
 AR_OPTIONS=rc 
