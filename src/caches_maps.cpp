@@ -295,8 +295,8 @@ bool dump_record(void *key, void *value, void *user_data)
     }
 
     logrecord_t *record = (logrecord_t*)key;
-    if (record->bytes >= BYTES_PER_MB                 // Greater than 1MB
-        && dumped_volume < data_volume_in_MB*0.8 ) { // Rate greater than 20%
+    if (record->bytes >= 100*BYTES_PER_MB) {                 // Greater than 1MB
+        //&& dumped_volume < data_volume_in_MB*0.8 ) { // Rate greater than 20%
         dumped_volume += record->bytes/BYTES_PER_MB;
 
         char content[128];
