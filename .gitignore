@@ -8,3 +8,11 @@ src/topn
 src/.settings/
 src/.project
 src/.cproject
+_builddbg/
+a.list
+cscope.files
+cscope.in.out
+cscope.out
+cscope.po.out
+local.vim
+tags
