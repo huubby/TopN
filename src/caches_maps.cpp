@@ -227,42 +227,14 @@ int ip_compare(const void *key1, const void *key2, void *user_data)
     }
 }
 
-typedef struct
-{
-    uint64_t    data_volume_high;
-    uint64_t    data_volume_low;
-    uint64_t    dumped_volume;
-    void        *data;
-} user_data_t;
-
-const uint32_t BYTES_PER_MB = 1024*1024;
-
 bool sort_ip(void *key, void *value, void *user_data)
 {
-    user_data_t *udata = (user_data_t *)user_data;
-
-    topn_t *topn = (topn_t *)udata->data;
-    uint64_t &volume_high = udata->data_volume_high;
-    uint64_t &volume_low = udata->data_volume_low;
-
-    logrecord_t *record = (logrecord_t*)value;
-    if (record->bytes >= BYTES_PER_MB) { // Greater than 1MB
-        volume_high += record->bytes / BYTES_PER_MB;
-        volume_low += record->bytes % BYTES_PER_MB;
-    } else {
-        volume_low += record->bytes;
-    }
-
-    if (volume_low >= BYTES_PER_MB) {
-        volume_high += volume_low / BYTES_PER_MB;
-        volume_low %= BYTES_PER_MB;
-    }
-
+    topn_t *topn = (topn_t *)user_data;
     topn_insert(topn, value, key); // reverse insertion
     return true;
 }
 
-bool sort_list(port_type_t type, user_data_t *user_data)
+bool sort_list(port_type_t type)
 {
     hash_table_t *table = get_map_by_type(type);
     if (table == NULL) {
@@ -274,37 +246,28 @@ bool sort_list(port_type_t type, user_data_t *user_data)
         topn_free(topn_ip);
     }
     topn_ip = topn_new(table_size, ip_compare, table, NULL, NULL);
-    user_data->data = topn_ip;
-    hash_table_foreach(table, sort_ip, user_data);
+    hash_table_foreach(table, sort_ip, topn_ip);
     //topn_foreach(topn_ip, print, NULL);
     return true;
 }
 
 bool dump_record(void *key, void *value, void *user_data)
 {
-    user_data_t *udata = (user_data_t *)user_data;
-    FILE *f = (FILE*)udata->data;
-    float data_volume_in_MB = (float)udata->data_volume_high;
-    uint64_t &dumped_volume = udata->dumped_volume;
-
     uint32_t addr = htonl(*(uint32_t*)value);
     char ip[16] = {0};
 
     if (!inet_ntop(AF_INET, &addr, ip, sizeof(ip))) {
         return false;
     }
-
     logrecord_t *record = (logrecord_t*)key;
-    if (record->bytes >= 100*BYTES_PER_MB) {                 // Greater than 1MB
-        //&& dumped_volume < data_volume_in_MB*0.8 ) { // Rate greater than 20%
-        dumped_volume += record->bytes/BYTES_PER_MB;
-
+    const uint32_t BYTES_PER_MB = 1024*1024;
+    if (record->bytes >= 100*BYTES_PER_MB) { // Greater than 100MB
         char content[128];
         sprintf(content
                 , "%s\t%llu\t%u\n"
                 , ip, record->bytes/BYTES_PER_MB, record->count);
         size_t len = strlen(content);
-        return len != fwrite(content, sizeof(char), len, f);
+        return len != fwrite(content, sizeof(char), len, (FILE *)user_data);
     }
 
     return true;
@@ -312,9 +275,7 @@ bool dump_record(void *key, void *value, void *user_data)
 
 bool dump_list(port_type_t type, const char *filename)
 {
-    user_data_t user_data;
-    memset(&user_data, 0, sizeof(user_data_t));
-    if (!sort_list(type, &user_data)) {
+    if (!sort_list(type)) {
         LOG(LOG_LEVEL_ERROR, "Sort list %s failed", filename);
         return false;
     }
@@ -326,8 +287,7 @@ bool dump_list(port_type_t type, const char *filename)
     }
     assert(file != NULL);
 
-    user_data.data = file;
-    topn_foreach(topn_ip, dump_record, &user_data);
+    topn_foreach(topn_ip, dump_record, file);
     fclose(file);
     return true;
 }
