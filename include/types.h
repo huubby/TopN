@@ -6,10 +6,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define PROTOCOL_TCP 0x01
+#define PROTOCOL_UDP 0x02
+#define PROTOCOL_BOTH 0x03
+typedef uint16_t protocol_t;
+
 #pragma pack(4)
 typedef struct {
     uint32_t count;
     uint64_t bytes;
+    protocol_t flag;
 } logrecord_t;
 #pragma pack()
 

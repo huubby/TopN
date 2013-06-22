@@ -98,6 +98,7 @@ record2map(uint32_t addr, const logrecord_t *record, port_type_t type)
     } else {
         original_record->count += record->count;
         original_record->bytes += record->bytes;
+        original_record->flag |= record->flag;
     }
 
     return true;
@@ -261,14 +262,17 @@ bool dump_record(void *key, void *value, void *user_data)
     }
     logrecord_t *record = (logrecord_t*)key;
     const uint32_t BYTES_PER_MB = 1024*1024;
-    if (record->bytes >= 100*BYTES_PER_MB) { // Greater than 100MB
+    //if (record->bytes >= 100*BYTES_PER_MB) { // Greater than 100MB
         char content[128];
         sprintf(content
-                , "%s\t%llu\t%u\n"
-                , ip, record->bytes/BYTES_PER_MB, record->count);
+                , "%s\t%llu\t%u\t%u\n"
+                , ip
+                , record->bytes/BYTES_PER_MB
+                , record->count
+                , record->flag);
         size_t len = strlen(content);
         return len != fwrite(content, sizeof(char), len, (FILE *)user_data);
-    }
+    //}
 
     return true;
 }

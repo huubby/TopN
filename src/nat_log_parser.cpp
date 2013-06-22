@@ -81,7 +81,7 @@ bool identify_port(const char *log, const char *port_name
 }
 
 bool identify_protocol_ip_port(const char *log
-        , uint32_t *addr, port_type_t *type, char **end)
+        , protocol_t *protocol, uint32_t *addr, port_type_t *type, char **end)
 {
     const char *tcp_protocol = " 6 ";
     const char *udp_protocol = " 17 ";
@@ -94,8 +94,11 @@ bool identify_protocol_ip_port(const char *log
     *end = (char *)log;
 
     const char *protocol_loc;
-    if (!(protocol_loc = strstr(log, tcp_protocol))
-        && !(protocol_loc = strstr(log, udp_protocol))) {
+    if ((protocol_loc = strstr(log, tcp_protocol)) != NULL) {
+        *protocol = PROTOCOL_TCP;
+    } else if ((protocol_loc = strstr(log, udp_protocol)) != NULL) {
+        *protocol = PROTOCOL_UDP;
+    } else {
         return false;
     }
 
@@ -176,7 +179,7 @@ bool parse_log(const char *log
     if (log == NULL) return false;
 
     char *position;
-    if (!identify_protocol_ip_port(log, addr, type, &position)) {
+    if (!identify_protocol_ip_port(log, &record->flag, addr, type, &position)) {
         return false;
     }
     if (!identify_bytes(position, &record->bytes)) {

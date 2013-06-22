@@ -2,6 +2,7 @@ FILTER_OUT=$(foreach v, $(2), $(if $(findstring $(1), $(v)),,$(v)))
 
 DBG_BUILD_DIR=../_builddbg
 REL_BUILD_DIR=../_build
+CXX=g++
 
 ifeq ($(MODE), REL)
 COMPILE_OPTIONS=-DNDEBUG -O2
@@ -13,7 +14,7 @@ BUILD_DIR=$(DBG_BUILD_DIR)
 TARGETS=analyzerd combinerd
 endif
 WARNING_OPTIONS=-Wall -Wpointer-arith
-COMPILE_OPTIONS+=-ansi -DMAX_LOG_LINE=5000000 -DLINUX $(WARNING_OPTIONS)
+COMPILE_OPTIONS+=-ansi -DMAX_LOG_LINE=1000000000 -DLINUX $(WARNING_OPTIONS)
 LINK_OPTIONS=-Wl
 INCLUDES=-I../include
 

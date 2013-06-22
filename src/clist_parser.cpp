@@ -21,7 +21,6 @@ uint64_t convert_bytes(char *traffic_str)
         return INVALID_BYTES;
 
     uint64_t bytes = 0;
-    float bytes_float_num = 0;
     errno = 0;
     bytes = strtoull(traffic_str, NULL, 10);
 
@@ -66,6 +65,15 @@ parse_c_list(const char *line, int len, uint32_t *addr, logrecord_t *record)
         return false;
     errno = 0;
     record->count = strtoull(tab_loc, NULL, 10);
+    if (errno != 0)
+        return false;  // Invalid number
+
+    // Flag that indicates TCP or UDP
+    while (*(++tab_loc) == '\t');
+    if (tab_loc - line > len)
+        return false;
+    errno = 0;
+    record->flag = strtoull(tab_loc, NULL, 10);
     if (errno != 0)
         return false;  // Invalid number
 
